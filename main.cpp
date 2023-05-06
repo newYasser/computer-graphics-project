@@ -28,18 +28,12 @@ using namespace std;
 #define CLIPPING_USING_SQUARE_LINE 25
 #define CLIPPING_USING_SQUARE_POLYGON 26
 
-
-
-
-
-
-
 HMENU hMenu;
 LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
 void AddMenus(HWND);
-void AddControls(HWND);
-
-
+int round(double);
+void drawLine_directMethod(HDC , int , int  , int  , int  , COLORREF);
+void drawRectangle(HDC hdc);
 
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,LPSTR args,int ncmdshow)
@@ -71,19 +65,23 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,LPSTR args,int ncmdshow)
 
 LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
 {
+    HDC hdc = GetDC(hWnd) ;
+    static int  x ,y;
    switch(msg)
    {
+       case WM_LBUTTONDOWN:
+           x = LOWORD(lp);
+           y = HIWORD(lp);
+           break;
        /* when something is clicked anything here will be performed
         * the w parameter determine which item is clicked
-        * */
+        */
        case WM_COMMAND:
-
            switch (wp)
            {
-               case 1:
-                   MessageBeep(MB_OK);
+               case CLIPPING_USING_RECTANGLE_LINE:
+                   drawRectangle(hdc);
                    break;
-
            }
            break;
        case WM_CREATE:
@@ -178,4 +176,61 @@ void AddMenus(HWND hWnd)
 }
 
 
+// starting point of execution
 
+int round(double point){
+    // check the nearest integer point ( to determine whether to round down or up )
+    if(point - (int)point > 0.5)
+        return (int)point + 1 ;
+    else
+        return (int)point ;
+}
+int max(int x , int y){
+    return (x>y ? x : y) ;
+}
+
+void drawLine_directMethod(HDC hdc , int x1, int y1 , int x2 , int y2 , COLORREF color){
+    int dy = y2-y1 ;
+    int dx = x2-x1 ;
+    double slope = dy/dx ;
+    // error if dy = 0 ;
+    double slopeInverse = dx/dy ;
+    // check the spread in x and y to determine which coordinate will be the independent value , and make the other dependent on it
+    // if x is independent ==> y = y1 + (x-x1) * slope
+    // if y is independent ==> x = x1 + (y-y1) * (1/slope)
+    // abs( ) : values may be -ve
+    if(abs(dx)>abs(dy)){
+        // x is independent
+        // swap to always make x2 > x1 , so we always iterate from x1 to x2 in the loop
+        if(x1>x2){
+            swap(x1,x2) ;
+            swap(y1,y2) ;
+        }
+        for(int x = x1 ; x<=x2 ; ++x){
+            double y = y1 + (x-x1)*slope ;
+            y = round(y) ;
+            SetPixel(hdc,x,y,color) ;
+        }
+    }
+    else{
+        // y is independent
+        if(y1>y2){
+            swap(x1,x2) ;
+            swap(y1,y2) ;
+        }
+        for(int y=y1 ; y<=y2 ; ++y){
+            double x = x1 + (y-y1)*slopeInverse ;
+            x = round(x) ;
+            SetPixel(hdc,x,y,color) ;
+        }
+    }
+
+}
+
+void drawRectangle(HDC hdc){
+    int x1 = 100,x2 = 101,x3 = 500,x4 = 501,y1 = 200,y2 = 400,y3 = 201,y4 = 401;
+    drawLine_directMethod(hdc,x1,y1,x2,y2,RGB(0,0,255)) ;
+    drawLine_directMethod(hdc,x3,y3,x4,y4,RGB(0,0,255)) ;
+    drawLine_directMethod(hdc,x1,y1,x3,y3,RGB(0,0,255)) ;
+    drawLine_directMethod(hdc,x2,y2,x4,y4,RGB(0,0,255)) ;
+}
