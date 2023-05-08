@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include <windows.h>
 using namespace std;
 
@@ -28,13 +29,31 @@ using namespace std;
 #define CLIPPING_USING_SQUARE_LINE 25
 #define CLIPPING_USING_SQUARE_POLYGON 26
 
+
+struct point
+{
+    int x, y;
+};
+
+
+union OutCode
+{
+    unsigned All : 4;
+    struct
+    {
+        unsigned left : 1, top : 1, right : 1, bottom : 1;
+    };
+};
 HMENU hMenu;
 LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
 void AddMenus(HWND);
 int round(double);
 void drawLine_directMethod(HDC , int , int  , int  , int  , COLORREF);
 void drawRectangle(HDC hdc);
-
+OutCode GetOutCode(point , int , int , int , int );
+void VIntersect(point, point, int , int*, int*);
+void HIntersect(point , point , int, int*, int*);
+void CohenSuth(HDC , point , point , int , int , int , int , COLORREF );
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,LPSTR args,int ncmdshow)
 {
@@ -65,13 +84,22 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,LPSTR args,int ncmdshow)
 
 LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
 {
+    static int x, y;
     HDC hdc = GetDC(hWnd) ;
-    static int  x ,y;
+   static  vector<point>points(10000);
+   static  int clicks = 2;
+    static int idx = 0;
    switch(msg)
    {
        case WM_LBUTTONDOWN:
+           point p;
            x = LOWORD(lp);
            y = HIWORD(lp);
+           p.x = x;
+           p.y = y;
+           points[idx] = p;
+           idx++;
+
            break;
        /* when something is clicked anything here will be performed
         * the w parameter determine which item is clicked
@@ -79,8 +107,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
        case WM_COMMAND:
            switch (wp)
            {
+
                case CLIPPING_USING_RECTANGLE_LINE:
                    drawRectangle(hdc);
+                   cout << points[0].x << ' ' << points[0].y << endl;
+                   cout << points[1].x << ' ' << points[1].y << endl;
+                   CohenSuth(hdc,points[0],points[1],100,401,501,200,RGB(0,0,255));
                    break;
            }
            break;
@@ -108,6 +140,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
 
 
 }
+
 
 void AddMenus(HWND hWnd)
 {
@@ -233,4 +266,84 @@ void drawRectangle(HDC hdc){
     drawLine_directMethod(hdc,x3,y3,x4,y4,RGB(0,0,255)) ;
     drawLine_directMethod(hdc,x1,y1,x3,y3,RGB(0,0,255)) ;
     drawLine_directMethod(hdc,x2,y2,x4,y4,RGB(0,0,255)) ;
+}
+
+
+OutCode GetOutCode(point p1, int xleft, int ytop, int xright, int ybottom)
+{
+    OutCode out;
+    out.All = 0;
+    if (p1.x < xleft)
+        out.left = 1;
+    else if (p1.x > xright)
+        out.right = 1;
+    if (p1.y < ytop)
+        out.top = 1;
+    else if (p1.y > ybottom)
+        out.bottom = 1;
+    return out;
+}
+
+void VIntersect(point p1, point p2, int x, int *xi, int *yi)
+{
+    *xi = x;
+    *yi = p1.y + (x - p1.x) * (p2.y - p1.y) / (p2.x - p1.x);
+}
+void HIntersect(point p1, point p2, int y, int *xi, int *yi)
+{
+    *yi = y;
+    *xi = p1.x + (y - p1.y) * (p2.x - p1.x) / (p2.y - p1.y);
+}
+void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int ybottom,COLORREF c)
+{
+    point pStart;
+    pStart.x = p1.x;
+    pStart.y = p1.y;
+    point pEnd;
+    pEnd.x = p2.x;
+    pEnd.y = p2.y;
+
+    OutCode out1 = GetOutCode(pStart, xleft, ytop, xright, ybottom);
+    OutCode out2 = GetOutCode(pEnd, xleft, ytop, xright, ybottom);
+    cout <<"hello1" << endl;
+    while ((out1.All || out2.All) && !(out1.All & out2.All))
+    {
+        int xi, yi;
+        cout << "hello2"<<endl;
+        if (out1.All)
+        {
+            if (out1.left)
+                VIntersect(pStart, pEnd, xleft, &xi, &yi);
+            else if (out1.top)
+                HIntersect(pStart, pEnd, ytop, &xi, &yi);
+            else if (out1.right)
+                VIntersect(pStart, pEnd, xright, &xi, &yi);
+            else
+                HIntersect(pStart, pEnd, ybottom, &xi, &yi);
+            pStart.x = xi;
+            pStart.y = yi;
+
+            out1 = GetOutCode(pStart, xleft, ytop, xright, ybottom);
+            cout << "HERE1" << endl;
+        }
+        else
+        {
+            if (out2.left)
+                VIntersect(pStart, pEnd, xleft, &xi, &yi);
+            else if (out2.top)
+                HIntersect(pStart, pEnd, ytop, &xi, &yi);
+            else if (out2.right)
+                VIntersect(pStart, pEnd, xright, &xi, &yi);
+            else
+                HIntersect(pStart, pEnd, ybottom, &xi, &yi);
+            pEnd.x = xi;
+            pEnd.y = yi;
+            out2 = GetOutCode(pEnd, xleft, ytop, xright, ybottom);
+            cout << "HERE2" << endl;
+        }
+    }
+    if (!out1.All && !out2.All){
+            drawLine_directMethod(hdc, pStart.x,pStart.y,pEnd.x,pEnd.y, c);
+            cout << "HERE3" <<endl;
+    }
 }
