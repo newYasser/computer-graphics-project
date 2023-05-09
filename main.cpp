@@ -29,12 +29,10 @@ using namespace std;
 #define CLIPPING_USING_SQUARE_LINE 25
 #define CLIPPING_USING_SQUARE_POLYGON 26
 
-
 struct point
 {
     int x, y;
 };
-
 
 union OutCode
 {
@@ -48,12 +46,17 @@ HMENU hMenu;
 LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
 void AddMenus(HWND);
 int round(double);
-void drawLine_directMethod(HDC , int , int  , int  , int  , COLORREF);
-void drawRectangle(HDC hdc);
+void drawLine_directMethod(HDC ,point,point, COLORREF);
+//void drawRectangle(HDC hdc);
 OutCode GetOutCode(point , int , int , int , int );
 void VIntersect(point, point, int , int*, int*);
 void HIntersect(point , point , int, int*, int*);
 void CohenSuth(HDC , point , point , int , int , int , int , COLORREF );
+void DrawPolygon(HDC, vector<point> , COLORREF);
+void MidPointLine(HDC, point, point , COLORREF );
+
+
+
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,LPSTR args,int ncmdshow)
 {
@@ -86,20 +89,17 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
 {
     static int x, y;
     HDC hdc = GetDC(hWnd) ;
-   static  vector<point>points(10000);
+   static  vector<point>points;
    static  int clicks = 2;
-    static int idx = 0;
+   static int idx = 0;
    switch(msg)
    {
        case WM_LBUTTONDOWN:
            point p;
-           x = LOWORD(lp);
-           y = HIWORD(lp);
-           p.x = x;
-           p.y = y;
-           points[idx] = p;
-           idx++;
-
+           p.x = LOWORD(lp);
+           p.y = HIWORD(lp);
+           points.push_back(p);
+           SetPixel(hdc,x,y,RGB(255,0,0));
            break;
        /* when something is clicked anything here will be performed
         * the w parameter determine which item is clicked
@@ -109,10 +109,13 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
            {
 
                case CLIPPING_USING_RECTANGLE_LINE:
-                   drawRectangle(hdc);
+                  // drawRectangle(hdc);
                    cout << points[0].x << ' ' << points[0].y << endl;
                    cout << points[1].x << ' ' << points[1].y << endl;
-                   CohenSuth(hdc,points[0],points[1],100,401,501,200,RGB(0,0,255));
+                  // CohenSuth(hdc,points[idx - 1],points[idx - 2],100,401,501,200,RGB(0,0,255));
+                   break;
+               case CLIPPING_USING_RECTANGLE_POLYGON:
+                   DrawPolygon(hdc,points, RGB(255,0,0));
                    break;
            }
            break;
@@ -138,9 +141,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
 
    }
 
-
 }
-
 
 void AddMenus(HWND hWnd)
 {
@@ -222,7 +223,8 @@ int max(int x , int y){
     return (x>y ? x : y) ;
 }
 
-void drawLine_directMethod(HDC hdc , int x1, int y1 , int x2 , int y2 , COLORREF color){
+void drawLine_directMethod(HDC hdc , point p1,point p2, COLORREF color){
+    int x1 = p1.x,y1 = p1.y,x2 = p2.x,y2 = p2.y;
     int dy = y2-y1 ;
     int dx = x2-x1 ;
     double slope = dy/dx ;
@@ -259,7 +261,7 @@ void drawLine_directMethod(HDC hdc , int x1, int y1 , int x2 , int y2 , COLORREF
     }
 
 }
-
+/*
 void drawRectangle(HDC hdc){
     int x1 = 100,x2 = 101,x3 = 500,x4 = 501,y1 = 200,y2 = 400,y3 = 201,y4 = 401;
     drawLine_directMethod(hdc,x1,y1,x2,y2,RGB(0,0,255)) ;
@@ -267,6 +269,7 @@ void drawRectangle(HDC hdc){
     drawLine_directMethod(hdc,x1,y1,x3,y3,RGB(0,0,255)) ;
     drawLine_directMethod(hdc,x2,y2,x4,y4,RGB(0,0,255)) ;
 }
+ */
 
 
 OutCode GetOutCode(point p1, int xleft, int ytop, int xright, int ybottom)
@@ -343,7 +346,140 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
         }
     }
     if (!out1.All && !out2.All){
-            drawLine_directMethod(hdc, pStart.x,pStart.y,pEnd.x,pEnd.y, c);
+            //drawLine_directMethod(hdc, pStart.x,pStart.y,pEnd.x,pEnd.y, c);
             cout << "HERE3" <<endl;
+    }
+}
+
+void DrawPolygon(HDC hdc, vector<point> p, COLORREF color)
+{
+    for (int i = 0; i < p.size() - 1; i++)
+    {
+        MidPointLine(hdc, p[i], p[i + 1], color);
+    }
+    MidPointLine(hdc, p[0], p[p.size() - 1], color);
+}
+
+
+
+void MidPointLine(HDC hdc, point p1, point p2, COLORREF c)
+{
+    int dx = p2.x - p1.x;
+    int dy = p2.y - p1.y;
+    if ((dx >= 0 && 0 <= dy && dy <= dx) || (dx < 0 && 0 >= dy && dy >= dx)) // 0 < slope < 1
+    {
+        if (p1.x > p2.x)
+        {
+            swap(p1, p2);
+            dx = p2.x - p1.x;
+            dy = p2.y - p1.y;
+        }
+        int x = p1.x, y = p1.y;
+        int d = dx - 2 * dy;
+        int d1 = 2 * (dx - dy);
+        int d2 = -2 * dy;
+        SetPixel(hdc, x, y, c);
+        while (x < p2.x)
+        {
+            if (d <= 0)
+            {
+                d += d1;
+                y++;
+            }
+            else
+            {
+                d += d2;
+            }
+            x++;
+            SetPixel(hdc, x, y, c);
+        }
+    }
+    else if ((dx >= 0 && dy > dx) || (dx < 0 && dy < dx)) // slope > 1
+    {
+        if (p1.y > p2.y)
+        {
+            swap(p1, p2);
+            dx = p2.x - p1.x;
+            dy = p2.y - p1.y;
+        }
+        int x = p1.x, y = p1.y;
+        int d = 2 * dx - dy;
+        int d1 = 2 * dx;
+        int d2 = 2 * dx - 2 * dy;
+        SetPixel(hdc, x, y, c);
+
+        while (y < p2.y)
+        {
+            if (d <= 0)
+            {
+                d += d1;
+            }
+            else
+            {
+                d += d2;
+                x++;
+            }
+            y++;
+
+            SetPixel(hdc, x, y, c);
+        }
+    }
+    else if ((dx >= 0 && dy < -dx) || (dx < 0 && dy > -dx)) // slope < -1
+    {
+        if (p1.y > p2.y)
+        {
+            swap(p1, p2);
+            dx = p2.x - p1.x;
+            dy = p2.y - p1.y;
+        }
+        int x = p1.x, y = p1.y;
+        int d = 2 * dx + dy;
+        int d1 = 2 * (dx + dy);
+        int d2 = 2 * dx;
+        SetPixel(hdc, x, y, c);
+
+        while (y < p2.y)
+        {
+            if (d <= 0)
+            {
+                d += d1;
+                x--;
+            }
+            else
+            {
+                d += d2;
+            }
+            y++;
+
+            SetPixel(hdc, x, y, c);
+        }
+    }
+    else
+    {
+        if (p1.x > p2.x)
+        {
+            swap(p1, p2);
+            dx = p2.x - p1.x;
+            dy = p2.y - p1.y;
+        }
+        int x = p1.x, y = p1.y;
+        int d = -dx - 2 * dy;
+        int d1 = -2 * dy;
+        int d2 = 2 * (-dx - dy);
+        SetPixel(hdc, x, y, c);
+        while (x < p2.x)
+        {
+            if (d <= 0)
+            {
+                d += d1;
+            }
+            else
+            {
+                d += d2;
+                y--;
+            }
+            x++;
+            SetPixel(hdc, x, y, c);
+        }
     }
 }
