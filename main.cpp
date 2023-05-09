@@ -28,10 +28,18 @@ using namespace std;
 #define CLIPPING_USING_RECTANGLE_POLYGON 24
 #define CLIPPING_USING_SQUARE_LINE 25
 #define CLIPPING_USING_SQUARE_POLYGON 26
+#define DRAW_RECTANGLE 27
+#define DRAW_POLYGON 28
+
 
 struct point
 {
     int x, y;
+    point(){}
+    point(int x,int y){
+        this->x = x;
+        this->y = y;
+    }
 };
 
 union OutCode
@@ -42,22 +50,32 @@ union OutCode
         unsigned left : 1, top : 1, right : 1, bottom : 1;
     };
 };
+
+typedef vector<point> VertexList;
+typedef bool (*IsInFunc)(point& v,int edge);
+typedef point (*IntersectFunc)(point& v1,point& v2,int edge);
 HMENU hMenu;
 LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
 void AddMenus(HWND);
 int round(double);
 void drawLine_directMethod(HDC ,point,point, COLORREF);
-//void drawRectangle(HDC hdc);
+void DrawRectangle(HDC hdc,point, point,COLORREF);
 OutCode GetOutCode(point , int , int , int , int );
 void VIntersect(point, point, int , int*, int*);
 void HIntersect(point , point , int, int*, int*);
 void CohenSuth(HDC , point , point , int , int , int , int , COLORREF );
 void DrawPolygon(HDC, vector<point> , COLORREF);
 void MidPointLine(HDC, point, point , COLORREF );
-
-
-
-
+VertexList ClipWithEdge(VertexList p,int edge,IsInFunc In,IntersectFunc Intersect);
+bool InLeft(point& v,int edge);
+bool InRight(point& v,int edge);
+bool InTop(point& v,int edge);
+bool InBottom(point& v,int edge);
+point VIntersect(point& ,point&,int );
+point HIntersect(point& ,point& ,int );
+point VIntersect(point& ,point& ,int );
+point HIntersect(point& ,point& ,int );
+void PolygonClip(HDC hdc,vector<point>& ,int ,int ,int ,int ,int );
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,LPSTR args,int ncmdshow)
 {
     WNDCLASSW wc = {0};
@@ -89,39 +107,65 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
 {
     static int x, y;
     HDC hdc = GetDC(hWnd) ;
-   static  vector<point>points;
-   static  int clicks = 2;
-   static int idx = 0;
-   switch(msg)
+    static  vector<point>points;
+    static COLORREF c = RGB(255,0,0);
+    switch(msg)
    {
-       case WM_LBUTTONDOWN:
+       case WM_LBUTTONDOWN: {
            point p;
            p.x = LOWORD(lp);
            p.y = HIWORD(lp);
            points.push_back(p);
-           SetPixel(hdc,x,y,RGB(255,0,0));
+           SetPixel(hdc, x, y, RGB(255, 0, 0));
            break;
+       }
        /* when something is clicked anything here will be performed
         * the w parameter determine which item is clicked
         */
-       case WM_COMMAND:
-           switch (wp)
-           {
+       case WM_COMMAND: {
+           switch (wp) {
+               case DRAW_RECTANGLE:
+                   if(points.size() < 2){
+                       cout << "Please Enter 2 points at least" << endl;
+                       break;
+                   }
+                   DrawRectangle(hdc, points[0], points[1], c);
+                   break;
+               case DRAW_POLYGON:
+                   DrawPolygon(hdc, points, c);
+                   break;
+               case LINE_MID_POINT:
+                   MidPointLine(hdc,points[2],points[3],c);
+                  // points.clear();
 
+                   break;
                case CLIPPING_USING_RECTANGLE_LINE:
-                  // drawRectangle(hdc);
-                   cout << points[0].x << ' ' << points[0].y << endl;
-                   cout << points[1].x << ' ' << points[1].y << endl;
-                  // CohenSuth(hdc,points[idx - 1],points[idx - 2],100,401,501,200,RGB(0,0,255));
+                   if(points.size() == 0){
+                       cout << "Please Enter the line 2 points and draw a Rectangle" <<endl;
+                       break;
+                   }
+                   else if(points.size() == 2){
+                       cout << "Please Enter the line 2 points and draw a line" <<endl;
+                       break;
+                   }
+                   else if (points.size() == 4) {
+                       CohenSuth(hdc, points[2], points[3], points[0].x, points[1].y, points[1].x, points[0].y, c);
+                       points.clear();
+                   }
+                   else{
+                       cout << "Something went wrong please try again" <<endl;
+                       break;
+                   }
                    break;
                case CLIPPING_USING_RECTANGLE_POLYGON:
-                   DrawPolygon(hdc,points, RGB(255,0,0));
+                   PolygonClip(hdc,points,points.size(),points[0].x,points[1].y,points[1].x,points[0].y);
+                   points.clear();
                    break;
            }
            break;
+       }
        case WM_CREATE:
            AddMenus(hWnd);
-          // AddControls(hWnd);
            break;
        case WM_DESTROY:
            PostQuitMessage(0);
@@ -132,7 +176,6 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
            HDC hdc = BeginPaint(hWnd, &ps);
            HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
            FillRect(hdc, &ps.rcPaint, hBrush);
-
            EndPaint(hWnd, &ps);
        }
            break;
@@ -155,7 +198,7 @@ void AddMenus(HWND hWnd)
     HMENU hCurveMenu = CreateMenu();
     HMENU hClippingSquareMenu = CreateMenu();
     HMENU hClippingRectangleMenu = CreateMenu();
-
+    HMENU hDraw = CreateMenu();
 
 
     AppendMenu(hLineMenu,MF_STRING,LINE_DDA,"DDA");
@@ -196,7 +239,8 @@ void AddMenus(HWND hWnd)
     AppendMenu(hClippingMenu,MF_POPUP,(UINT_PTR)hClippingSquareMenu,"Square");
     AppendMenu(hClippingMenu,MF_POPUP,(UINT_PTR)hClippingRectangleMenu,"Rectangle");
 
-
+    AppendMenu(hDraw,MF_STRING,DRAW_RECTANGLE,"RECTANGLE");
+    AppendMenu(hDraw,MF_STRING,DRAW_POLYGON,"POLYGON");
 
 
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hLineMenu,"Line");
@@ -205,6 +249,7 @@ void AddMenus(HWND hWnd)
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hCurveMenu,"Curve");
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hEllipseMenu,"Ellipse");
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hClippingMenu,"Clipping");
+    AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hDraw,"Draw");
 
     SetMenu(hWnd,hMenu);
 }
@@ -261,15 +306,19 @@ void drawLine_directMethod(HDC hdc , point p1,point p2, COLORREF color){
     }
 
 }
-/*
-void drawRectangle(HDC hdc){
-    int x1 = 100,x2 = 101,x3 = 500,x4 = 501,y1 = 200,y2 = 400,y3 = 201,y4 = 401;
-    drawLine_directMethod(hdc,x1,y1,x2,y2,RGB(0,0,255)) ;
-    drawLine_directMethod(hdc,x3,y3,x4,y4,RGB(0,0,255)) ;
-    drawLine_directMethod(hdc,x1,y1,x3,y3,RGB(0,0,255)) ;
-    drawLine_directMethod(hdc,x2,y2,x4,y4,RGB(0,0,255)) ;
+
+void DrawRectangle(HDC hdc,point p1,point p2,COLORREF c){
+    point p3,p4;
+    p3.x = p1.x;
+    p3.y = p2.y;
+    p4.x = p2.x;
+    p4.y = p1.y;
+    MidPointLine(hdc,p1,p4,c);
+    MidPointLine(hdc,p1,p3,c);
+    MidPointLine(hdc,p2,p3,c);
+    MidPointLine(hdc,p2,p4,c);
 }
- */
+
 
 
 OutCode GetOutCode(point p1, int xleft, int ytop, int xright, int ybottom)
@@ -346,18 +395,18 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
         }
     }
     if (!out1.All && !out2.All){
-            //drawLine_directMethod(hdc, pStart.x,pStart.y,pEnd.x,pEnd.y, c);
+            drawLine_directMethod(hdc, pStart,pEnd, c);
             cout << "HERE3" <<endl;
     }
 }
 
 void DrawPolygon(HDC hdc, vector<point> p, COLORREF color)
 {
-    for (int i = 0; i < p.size() - 1; i++)
+    for (int i = 2; i < p.size() - 1; i++)
     {
         MidPointLine(hdc, p[i], p[i + 1], color);
     }
-    MidPointLine(hdc, p[0], p[p.size() - 1], color);
+    MidPointLine(hdc, p[2], p[p.size() - 1], color);
 }
 
 
@@ -481,5 +530,72 @@ void MidPointLine(HDC hdc, point p1, point p2, COLORREF c)
             x++;
             SetPixel(hdc, x, y, c);
         }
+    }
+}
+VertexList ClipWithEdge(VertexList p,int edge,IsInFunc In,IntersectFunc Intersect)
+{
+    VertexList OutList;
+    point v1=p[p.size()-1];
+    bool v1_in=In(v1,edge);
+    for(int i=0;i<(int)p.size();i++)
+    {
+        point v2=p[i];
+        bool v2_in=In(v2,edge);
+        if(!v1_in && v2_in)
+        {
+            OutList.push_back(Intersect(v1,v2,edge));
+            OutList.push_back(v2);
+        }else if(v1_in && v2_in) OutList.push_back(v2);
+        else if(v1_in) OutList.push_back(Intersect(v1,v2,edge));
+        v1=v2;
+        v1_in=v2_in;
+    }
+    return OutList;
+}
+bool InLeft(point& v,int edge)
+{
+    return v.x>=edge;
+}
+bool InRight(point& v,int edge)
+{
+    return v.x<=edge;
+}
+bool InTop(point& v,int edge)
+{
+    return v.y>=edge;
+}
+bool InBottom(point& v,int edge)
+{
+    return v.y<=edge;
+}
+point VIntersect(point& v1,point& v2,int xedge)
+{
+    point res;
+    res.x=xedge;
+    res.y=v1.y+(xedge-v1.x)*(v2.y-v1.y)/(v2.x-v1.x);
+    return res;
+}
+point HIntersect(point& v1,point& v2,int yedge)
+{
+    point res;
+    res.y=yedge;
+    res.x=v1.x+(yedge-v1.y)*(v2.x-v1.x)/(v2.y-v1.y);
+    return res;
+}
+void PolygonClip(HDC hdc,vector<point> &p,int n,int xleft,int ytop,int xright,int ybottom)
+{
+    VertexList vlist;
+    for(int i=2;i<n;i++)vlist.push_back(point(p[i].x,p[i].y));
+    vlist=ClipWithEdge(vlist,xleft,InLeft,VIntersect);
+    vlist=ClipWithEdge(vlist,ytop,InTop,HIntersect);
+    vlist=ClipWithEdge(vlist,xright,InRight,VIntersect);
+    vlist=ClipWithEdge(vlist,ybottom,InBottom,HIntersect);
+    point v1=vlist[vlist.size()-1];
+    for(int i=0;i<(int)vlist.size();i++)
+    {
+        point v2=vlist[i];
+        MoveToEx(hdc,round(v1.x),round(v1.y),NULL);
+        LineTo(hdc,round(v2.x),round(v2.y));
+        v1=v2;
     }
 }
