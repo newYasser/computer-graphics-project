@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <list>
+#include <fstream>
 #include <windows.h>
 using namespace std;
 
@@ -30,18 +32,34 @@ using namespace std;
 #define CLIPPING_USING_SQUARE_POLYGON 26
 #define DRAW_RECTANGLE 27
 #define DRAW_POLYGON 28
-
+#define OTHER_OPTIONS_SAVE 29
+#define OTHER_OPTIONS_RELOAD 30
+#define OTHER_OPTIONS_CLEAR 31
 
 struct point
 {
     int x, y;
-    point(){}
+    point(){
+        x = -1;
+        y = -1;
+    }
     point(int x,int y){
         this->x = x;
         this->y = y;
     }
 };
 
+struct algorithm{
+    int id;
+    vector<point>points;
+    algorithm(){
+        id = -1;
+    }
+    algorithm(int id,vector<point>&points){
+        this->points = points;
+        this->id = id;
+    }
+};
 union OutCode
 {
     unsigned All : 4;
@@ -105,10 +123,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,LPSTR args,int ncmdshow)
 
 LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
 {
-    static int x, y;
     HDC hdc = GetDC(hWnd) ;
-    static  vector<point>points;
     static COLORREF c = RGB(255,0,0);
+    static  vector<point>points;
+    static list<algorithm>screen;
+
     switch(msg)
    {
        case WM_LBUTTONDOWN: {
@@ -116,12 +135,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
            p.x = LOWORD(lp);
            p.y = HIWORD(lp);
            points.push_back(p);
-           SetPixel(hdc, x, y, RGB(255, 0, 0));
            break;
        }
        /* when something is clicked anything here will be performed
         * the w parameter determine which item is clicked
         */
+
        case WM_COMMAND: {
            switch (wp) {
                case DRAW_RECTANGLE:
@@ -129,15 +148,19 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
                        cout << "Please Enter 2 points at least" << endl;
                        break;
                    }
-                   DrawRectangle(hdc, points[0], points[1], c);
+                   DrawRectangle(hdc, points[points.size() - 2], points[points.size() - 1], c);
+                   screen.emplace_back(DRAW_RECTANGLE,points);
+                   points.clear();
                    break;
                case DRAW_POLYGON:
                    DrawPolygon(hdc, points, c);
+                   screen.emplace_back(DRAW_POLYGON,points);
+                   points.clear();
                    break;
                case LINE_MID_POINT:
-                   MidPointLine(hdc,points[2],points[3],c);
-                  // points.clear();
-
+                   MidPointLine(hdc,points[points.size() - 2], points[points.size() - 1],c);
+                   screen.emplace_back(LINE_MID_POINT,points);
+                   points.clear();
                    break;
                case CLIPPING_USING_RECTANGLE_LINE:
                    if(points.size() == 0){
@@ -148,8 +171,11 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
                        cout << "Please Enter the line 2 points and draw a line" <<endl;
                        break;
                    }
-                   else if (points.size() == 4) {
-                       CohenSuth(hdc, points[2], points[3], points[0].x, points[1].y, points[1].x, points[0].y, c);
+                   else if (points.size() >= 4) {
+                       CohenSuth(hdc, points[points.size() - 2], points[points.size() - 1],
+                                 points[points.size() - 4].x, points[points.size() - 3].y, points[points.size() - 3].x,
+                                 points[points.size() - 4].y, c);
+                       screen.emplace_back(CLIPPING_USING_RECTANGLE_LINE,points);
                        points.clear();
                    }
                    else{
@@ -159,7 +185,44 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd,UINT msg,WPARAM wp,LPARAM lp)
                    break;
                case CLIPPING_USING_RECTANGLE_POLYGON:
                    PolygonClip(hdc,points,points.size(),points[0].x,points[1].y,points[1].x,points[0].y);
+                   screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON,points);
                    points.clear();
+                   break;
+               case OTHER_OPTIONS_RELOAD:
+               {
+                   ifstream saveFile("save.txt");
+                   string line;
+                   vector<int>nums;
+                   string num;
+                   while(getline(saveFile,line)){
+                       for(char c : line){
+                           if(isdigit(c)){
+                               num += c;
+                           }else if(c == ' '){
+                              nums.push_back(stoi(num));
+                           }
+                           if(c == ' '){
+                               num.clear();
+                           }
+                       }
+
+
+
+                   }
+
+                   break;
+               }
+               case OTHER_OPTIONS_SAVE:
+                   ofstream saveFile("save.txt");
+                   for (auto algo : screen) {
+                       saveFile << algo.id;
+                        for(auto point :algo.points){
+                            saveFile << point.x << ' ' << point.y << ' ';
+                        }
+                        saveFile << '\n';
+                   }
+                   saveFile.close();
+
                    break;
            }
            break;
@@ -199,6 +262,7 @@ void AddMenus(HWND hWnd)
     HMENU hClippingSquareMenu = CreateMenu();
     HMENU hClippingRectangleMenu = CreateMenu();
     HMENU hDraw = CreateMenu();
+    HMENU hOtherOptions = CreateMenu();
 
 
     AppendMenu(hLineMenu,MF_STRING,LINE_DDA,"DDA");
@@ -242,6 +306,10 @@ void AddMenus(HWND hWnd)
     AppendMenu(hDraw,MF_STRING,DRAW_RECTANGLE,"RECTANGLE");
     AppendMenu(hDraw,MF_STRING,DRAW_POLYGON,"POLYGON");
 
+    AppendMenu(hOtherOptions,MF_STRING,OTHER_OPTIONS_SAVE,"Save");
+    AppendMenu(hOtherOptions,MF_STRING,OTHER_OPTIONS_RELOAD,"Reload");
+    AppendMenu(hOtherOptions,MF_STRING,OTHER_OPTIONS_CLEAR,"Clear");
+
 
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hLineMenu,"Line");
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hCircleMenu,"Circle");
@@ -250,6 +318,7 @@ void AddMenus(HWND hWnd)
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hEllipseMenu,"Ellipse");
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hClippingMenu,"Clipping");
     AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hDraw,"Draw");
+    AppendMenu(hMenu,MF_POPUP,(UINT_PTR)hOtherOptions,"Other");
 
     SetMenu(hWnd,hMenu);
 }
@@ -398,15 +467,16 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
             drawLine_directMethod(hdc, pStart,pEnd, c);
             cout << "HERE3" <<endl;
     }
+    cout << "HERE4" << endl;
 }
 
 void DrawPolygon(HDC hdc, vector<point> p, COLORREF color)
 {
-    for (int i = 2; i < p.size() - 1; i++)
+    for (int i = 0; i < p.size() - 1; i++)
     {
         MidPointLine(hdc, p[i], p[i + 1], color);
     }
-    MidPointLine(hdc, p[2], p[p.size() - 1], color);
+    MidPointLine(hdc, p[0], p[p.size() - 1], color);
 }
 
 
