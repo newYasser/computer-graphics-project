@@ -3,7 +3,6 @@
 #include <list>
 #include <fstream>
 #include <windows.h>
-
 using namespace std;
 
 #define LINE_DDA 1
@@ -49,6 +48,10 @@ using namespace std;
 #define COLOR_GRAY 42
 #define COLOR_CYAN 43
 
+int Round(double x)
+{
+    return (int)(x + 0.5);
+}
 
 
 struct point {
@@ -156,6 +159,15 @@ point HIntersect(point &, point &, int);
 
 void PolygonClip(HDC hdc, vector <point> &, int, int, int, int, int);
 
+void DrawHermiteCurve(HDC hdc, point p1, point T1, point p2, point T2, COLORREF color);
+void DrawCardinalSpline(HDC, vector<point> , int , double , COLORREF );
+void Draw4points(HDC , int , int , int , int , COLORREF );
+void DrawEllipseDirect(HDC , point p, int , int , COLORREF );
+void DrawEllipsePolar(HDC , point , int , int , COLORREF );
+void DrawEllipseMidpoint(HDC , point , int , int , COLORREF );
+double CalcRadius(point, point );
+
+
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdshow) {
     WNDCLASSW wc = {0};
     wc.hbrBackground = (HBRUSH) COLOR_WINDOW;
@@ -186,6 +198,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
     static COLORREF c = RGB(255, 0, 0);
     static vector <point> points;
     static list <algorithm> screen;
+    static int currColor;
 
     switch (msg) {
         case WM_LBUTTONDOWN: {
@@ -209,12 +222,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                     DrawRectangle(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                    screen.emplace_back(DRAW_RECTANGLE, points, c);
+                    screen.emplace_back(DRAW_RECTANGLE, points, currColor);
                     points.clear();
                     break;
                 case DRAW_POLYGON:
                     DrawPolygon(hdc, points, c);
-                    screen.emplace_back(DRAW_POLYGON, points, c);
+                    screen.emplace_back(DRAW_POLYGON, points, currColor);
                     points.clear();
                     break;
                 case LINE_MID_POINT:
@@ -228,7 +241,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is : Line and the Algorithm is : Mid Point" << endl;
                         cout<<"Start Point : ("<<points[points.size() - 2].x<<","<<points[points.size() - 2].y<<")"<<endl;
                         cout<<"End Point : ("<<points[points.size() - 1].x<<","<<points[points.size() - 1].y<<")"<<endl;
-                        screen.emplace_back(LINE_MID_POINT, points,c);
+                        screen.emplace_back(LINE_MID_POINT, points,currColor);
                         points.clear();
                         break;
                     }
@@ -243,7 +256,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is : Line and the Algorithm is : DDA" << endl;
                         cout<<"Start Point : ("<<points[points.size() - 2].x<<","<<points[points.size() - 2].y<<")"<<endl;
                         cout<<"End Point : ("<<points[points.size() - 1].x<<","<<points[points.size() - 1].y<<")"<<endl;
-                        screen.emplace_back(LINE_DDA, points,c);
+                        screen.emplace_back(LINE_DDA, points,currColor);
                         points.clear();
                         break;
                     }
@@ -258,7 +271,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is : Line and the Algorithm is : Parametric" << endl;
                         cout<<"Start Point : ("<<points[points.size() - 2].x<<","<<points[points.size() - 2].y<<")"<<endl;
                         cout<<"End Point : ("<<points[points.size() - 1].x<<","<<points[points.size() - 1].y<<")"<<endl;
-                        screen.emplace_back(LINE_PARAMETRIC, points,c);
+                        screen.emplace_back(LINE_PARAMETRIC, points,currColor);
                         points.clear();
                         break;
                     }
@@ -273,7 +286,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is: Circle and the Algorithm is: Direct" << endl;
                         cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
                         cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_DIRECT, points,c);
+                        screen.emplace_back(CIRCLE_DIRECT, points,currColor);
                         points.clear();
                         break;
                     }
@@ -288,7 +301,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is: Circle and the Algorithm is: Polar" << endl;
                         cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
                         cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_POLAR, points,c);
+                        screen.emplace_back(CIRCLE_POLAR, points,currColor);
                         points.clear();
                         break;
                     }
@@ -303,7 +316,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is: Circle and the Algorithm is: Iterative Polar" << endl;
                         cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
                         cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_ITERATIVE_POLAR, points,c);
+                        screen.emplace_back(CIRCLE_ITERATIVE_POLAR, points,currColor);
                         points.clear();
                         break;
                     }
@@ -318,7 +331,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is: Circle and the Algorithm is: Midpoint" << endl;
                         cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
                         cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_MIDPOINT, points,c);
+                        screen.emplace_back(CIRCLE_MIDPOINT, points,currColor);
                         points.clear();
                         break;
                     }
@@ -333,10 +346,37 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout<< "The Shape is: Circle and the Algorithm is: Modified Midpoint" << endl;
                         cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
                         cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_MODIFIED_MIDPOINT, points,c);
+                        screen.emplace_back(CIRCLE_MODIFIED_MIDPOINT, points,currColor);
                         points.clear();
                         break;
                     }
+                case ELLIPSE_DIRECT: {
+                    int a = CalcRadius(points[0], points[1]);
+                    int b = CalcRadius(points[0], points[2]);
+                    DrawEllipseDirect(hdc, points[0], a, b, currColor);
+                    points.clear();
+                    break;
+                }
+                case ELLIPSE_POLAR: {
+                    int a = CalcRadius(points[0], points[1]);
+                    int b = CalcRadius(points[0], points[2]);
+                    cout << a << endl;
+                    cout << b << endl;
+                    DrawEllipsePolar(hdc, points[0], a, b, c);
+                    screen.emplace_back(ELLIPSE_POLAR, points,currColor);
+                    points.clear();
+                    break;
+                }
+                case ELLIPSE_MIDPOINT:
+                {
+                    int a = CalcRadius(points[0], points[1]);
+                    int b = CalcRadius(points[0], points[2]);
+                    cout << a << endl;
+                    cout << b << endl;
+                    DrawEllipseMidpoint(hdc, points[0], a, b, currColor);
+                    points.clear();
+                    break;
+                }
                 case CLIPPING_USING_RECTANGLE_LINE:
                     if (points.size() == 0) {
                         cout << "Please Enter the line 2 points and draw a Rectangle" << endl;
@@ -348,7 +388,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         CohenSuth(hdc, points[points.size() - 2], points[points.size() - 1],
                                   points[points.size() - 4].x, points[points.size() - 3].y, points[points.size() - 3].x,
                                   points[points.size() - 4].y, c);
-                        screen.emplace_back(CLIPPING_USING_RECTANGLE_LINE, points,c);
+                        screen.emplace_back(CLIPPING_USING_RECTANGLE_LINE, points,currColor);
                         points.clear();
                     } else {
                         cout << "Something went wrong please try again" << endl;
@@ -357,9 +397,19 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     break;
                 case CLIPPING_USING_RECTANGLE_POLYGON:
                     PolygonClip(hdc, points, points.size(), points[0].x, points[1].y, points[1].x, points[0].y);
-                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points,c);
+                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points,currColor);
                     points.clear();
                     break;
+                case CARDINAL_SPLINE_CURVE:
+                    if(points.size() < 3){
+                        cout << "You have to Enter points more than 3" << endl;
+                    }
+                    DrawCardinalSpline( hdc, points, points.size(),1,c);
+                    screen.emplace_back(CARDINAL_SPLINE_CURVE,points,currColor);
+                    points.clear();
+                    break;
+
+
                 case OTHER_OPTIONS_CLEAR:
                     screen.clear();
                     points.clear();
@@ -416,39 +466,51 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                 }
                 case COLOR_ORANGE:
                     c = RGB(255, 165, 0);
+                    currColor = COLOR_ORANGE;
                     break;
                 case COLOR_RED:
                     c = RGB(255, 0, 0);
+                    currColor = COLOR_RED;
                     break;
                 case COLOR_GREEN:
                     c = RGB(0, 255, 0);
+                    currColor = COLOR_GREEN;
                     break;
                 case COLOR_BLUE:
                     c = RGB(0, 0, 255);
+                    currColor = COLOR_BLUE;
                     break;
                 case COLOR_BLACK:
                     c = RGB(0, 0, 0);
+                    currColor = COLOR_BLACK;
                     break;
                 case COLOR_WHITE:
                     c = RGB(255, 255, 255);
+                    currColor = COLOR_WHITE;
                     break;
                 case COLOR_YELLOW:
                     c = RGB(255, 255, 0);
+                    currColor = COLOR_YELLOW;
                     break;
                 case COLOR_PURPLE:
                     c = RGB(128, 0, 128);
+                    currColor = COLOR_PURPLE;
                     break;
                 case COLOR_BROWN:
                     c = RGB(165, 42, 42);
+                    currColor = COLOR_BROWN;
                     break;
                 case COLOR_PINK:
                     c = RGB(255, 192, 203);
+                    currColor = COLOR_PINK;
                     break;
                 case COLOR_GRAY:
                     c = RGB(128, 128, 128);
+                    currColor = COLOR_GRAY;
                     break;
                 case COLOR_CYAN:
                     c = RGB(0, 255, 255);
+                    currColor = COLOR_CYAN;
                     break;
                 case OTHER_OPTIONS_SAVE:
                     ofstream saveFile("save.txt");
@@ -574,8 +636,8 @@ void AddMenus(HWND hWnd) {
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hEllipseMenu, "Ellipse");
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hClippingMenu, "Clipping");
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hDraw, "Draw");
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hOtherOptions, "Other");
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hColor, "Color");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hOtherOptions, "Other");
 
 
     SetMenu(hWnd, hMenu);
@@ -1067,5 +1129,153 @@ void PolygonClip(HDC hdc, vector <point> &p, int n, int xleft, int ytop, int xri
         MoveToEx(hdc, round(v1.x), round(v1.y), NULL);
         LineTo(hdc, round(v2.x), round(v2.y));
         v1 = v2;
+    }
+}
+
+void DrawHermiteCurve(HDC hdc, point p1, point T1, point p2, point T2, COLORREF color)
+{
+
+    double alpha0 = p1.x,
+            alpha1 = T1.x,
+            alpha2 = -3 * p1.x - 2 * T1.x + 3 * p2.x - T2.x,
+            alpha3 = 2 * p1.x + T1.x - 2 * p2.x + T2.x;
+    double beta0 = p1.y,
+            beta1 = T1.y,
+            beta2 = -3 * p1.y - 2 * T1.y + 3 * p2.y - T2.y,
+            beta3 = 2 * p1.y + T1.y - 2 * p2.y + T2.y;
+    for (double t = 0; t <= 1; t += 0.001)
+    {
+        double t2 = t * t,
+                t3 = t2 * t;
+        double x = alpha0 + alpha1 * t + alpha2 * t2 + alpha3 * t3;
+        double y = beta0 + beta1 * t + beta2 * t2 + beta3 * t3;
+
+        SetPixel(hdc, round(x), round(y), color);
+    }
+}
+
+
+void DrawCardinalSpline(HDC hdc, vector<point> p, int n, double c, COLORREF color)
+{
+    vector<point> t(n);
+    for (int i = 1; i < n - 1; i++)
+    {
+        t[i].x = (c / 2) * (p[i + 1].x - p[i - 1].x);
+        t[i].y = (c / 2) * (p[i + 1].y - p[i - 1].y);
+    }
+    t[0].x = (c / 2) * (p[1].x - p[0].x);
+    t[0].y = (c / 2) * (p[1].y - p[0].y);
+
+    t[n - 1].x = (c / 2) * (p[n - 1].x - p[n - 2].x);
+    t[n - 1].y = (c / 2) * (p[n - 1].y - p[n - 2].y);
+    for (int i = 0; i < n - 1; i++)
+    {
+        DrawHermiteCurve(hdc, p[i], t[i], p[i + 1], t[i + 1], color);
+    }
+}
+
+void Draw4points(HDC hdc, int xc, int yc, int x, int y, COLORREF color)
+{
+    SetPixel(hdc, xc + x, yc + y, color);
+    SetPixel(hdc, xc + x, yc - y, color);
+    SetPixel(hdc, xc - x, yc + y, color);
+    SetPixel(hdc, xc - x, yc - y, color);
+}
+double CalcRadius(point pc,point p)
+{
+    return sqrt(pow((p.x - pc.x),2) + pow((p.y - pc.y),2));
+}
+void DrawEllipseDirect(HDC hdc, point p, int a, int b, COLORREF c)
+{
+    int xc = p.x;
+    int yc = p.y;
+    int x = 0;
+    double y = b;
+    Draw4points(hdc, xc, yc, x, Round(y), c);
+    while (x * b * b < y * a * a)
+    {
+        x++;
+        y = b * sqrt(1 - (x * x * 1.0) / (a * a));
+        Draw4points(hdc, xc, yc, x, Round(y), c);
+        cout << "Here1" << endl;
+    }
+    int y1 = 0;
+    double x1 = a;
+    Draw4points(hdc, xc, yc, Round(x1), y1, c);
+    cout << "Here2" << endl;
+
+    while (x1 * b * b > y1 * a * a)
+    {
+        y1++;
+        x1 = a * sqrt(1 - (y1 * y1 * 1.0) / (b * b));
+        Draw4points(hdc, xc, yc, Round(x1), y1, c);
+        cout << "Here3" << endl;
+
+    }
+}
+void DrawEllipsePolar(HDC hdc, point p, int a, int b, COLORREF c)
+{
+    int xc = p.x;
+    int yc = p.y;
+    double x = a;
+    double y = 0;
+    double theta = 0;
+    double dtheta = 1.0 / ((a + b));
+    double cd = cos(dtheta);
+    double sd = sin(dtheta);
+
+    Draw4points(hdc, xc, yc, round(x), round(y), c);
+    while (x > 0)
+    {
+        x = a * cos(theta);
+        y = b * sin(theta);
+        theta += dtheta;
+        Draw4points(hdc, xc, yc, round(x), round(y), c);
+    }
+}
+
+void DrawEllipseMidpoint(HDC hdc, point p, int a, int b, COLORREF c)
+
+{
+    int xc = p.x;
+    int yc = p.y;
+    int x = 0, y = b;
+    int b2 = b * b;
+    int a2 = a * a;
+    double d = b2 + a2 * pow((b - 0.5), 2) - a2 * b2;
+    Draw4points(hdc, xc, yc, x, y, c);
+    while (x * b * b < y * a * a)
+    {
+        if (d <= 0)
+        {
+            d += b2 * (2 * x + 3);
+            x++;
+        }
+        else
+        {
+            d += b2 * (2 * x + 3) + a2 * (-2 * y + 2);
+            x++;
+            y--;
+        }
+        Draw4points(hdc, xc, yc, x, y, c);
+    }
+    x = a;
+    y = 0;
+    d = b2 * pow((a - 0.5), 2) + a2 - a2 * b2;
+    Draw4points(hdc, xc, yc, x, y, c);
+    while (x * b * b > y * a * a)
+    {
+        if (d <= 0)
+        {
+            d += a2 * (2 * y + 3);
+            y++;
+        }
+        else
+        {
+            d += a2 * (2 * y + 3) + b2 * (-2 * x + 2);
+            x--;
+            y++;
+        }
+        Draw4points(hdc, xc, yc, x, y, c);
     }
 }
