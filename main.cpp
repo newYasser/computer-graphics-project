@@ -198,7 +198,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
     static COLORREF c = RGB(255, 0, 0);
     static vector <point> points;
     static list <algorithm> screen;
-    static int currColor;
+    static int currColor=COLOR_RED;
 
     switch (msg) {
         case WM_LBUTTONDOWN: {
@@ -373,7 +373,8 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     int b = CalcRadius(points[0], points[2]);
                     cout << a << endl;
                     cout << b << endl;
-                    DrawEllipseMidpoint(hdc, points[0], a, b, currColor);
+                    DrawEllipseMidpoint(hdc, points[0], a, b, c);
+                    screen.emplace_back(ELLIPSE_MIDPOINT, points,currColor);
                     points.clear();
                     break;
                 }
@@ -409,7 +410,6 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     points.clear();
                     break;
 
-
                 case OTHER_OPTIONS_CLEAR:
                     screen.clear();
                     points.clear();
@@ -437,7 +437,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                                 num="";
                             }else if (colorFlag && line[i]==' '){
                                 c=stoi(num);
-                                SendMessage(hWnd,WM_COMMAND, id, 0);
+                                SendMessage(hWnd,WM_COMMAND, c, 0);
                                 colorFlag=false;
                                 num="";
                             }
