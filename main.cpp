@@ -2,6 +2,7 @@
 #include <vector>
 #include <list>
 #include <fstream>
+#include<cmath>
 #include <windows.h>
 using namespace std;
 
@@ -48,10 +49,6 @@ using namespace std;
 #define COLOR_GRAY 42
 #define COLOR_CYAN 43
 
-int Round(double x)
-{
-    return (int)(x + 0.5);
-}
 
 
 struct point {
@@ -104,7 +101,7 @@ LRESULT CALLBACK WindowProcedure(HWND, UINT, WPARAM, LPARAM);
 
 void AddMenus(HWND);
 
-int round(double);
+int Round(double);
 
 template<typename T>
 T sqrt(T);
@@ -223,12 +220,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     }
                     DrawRectangle(hdc, points[points.size() - 2], points[points.size() - 1], c);
                     screen.emplace_back(DRAW_RECTANGLE, points, currColor);
-                    points.clear();
+                    //points.clear();
                     break;
                 case DRAW_POLYGON:
                     DrawPolygon(hdc, points, c);
                     screen.emplace_back(DRAW_POLYGON, points, currColor);
-                    points.clear();
+                    //points.clear();
                     break;
                 case LINE_MID_POINT:
                     if (points.size() < 2) {
@@ -350,32 +347,79 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         points.clear();
                         break;
                     }
-                case ELLIPSE_DIRECT: {
-                    int a = CalcRadius(points[0], points[1]);
-                    int b = CalcRadius(points[0], points[2]);
-                    DrawEllipseDirect(hdc, points[0], a, b, currColor);
-                    points.clear();
+                case ELLIPSE_DIRECT:{
+                    if (points.empty()) {
+                        cout << "To use this method you have to click 3 clicks\n"
+                                "1- the first one is the center.\n"
+                                "2- the second one is the horizontal radius.\n"
+                                "3- and the third one is the vertical radius.\n";
+                    }else if(points.size() < 3){
+                        cout << "Please Enter the 3 points you only clicked " << points.size() << "points" << endl;
+                        if(points.size()  == 1){
+                            cout << "You still didn't click for the horizontal radius (a) and the vertical radius (b)." << endl;
+                        }
+                        else if(points.size() == 2){
+                            cout << "You still didn't click for the the vertical radius (b)" <<endl;
+                        }
+                    }else {
+
+                        int a = CalcRadius(points[0], points[1]);
+                        int b = CalcRadius(points[0], points[2]);
+                        DrawEllipseDirect(hdc, points[0], a, b, c);
+                        screen.emplace_back(ELLIPSE_DIRECT, points, currColor);
+                        points.clear();
+                    }
                     break;
                 }
                 case ELLIPSE_POLAR: {
-                    int a = CalcRadius(points[0], points[1]);
-                    int b = CalcRadius(points[0], points[2]);
-                    cout << a << endl;
-                    cout << b << endl;
-                    DrawEllipsePolar(hdc, points[0], a, b, c);
-                    screen.emplace_back(ELLIPSE_POLAR, points,currColor);
-                    points.clear();
+                    if (points.empty()) {
+                        cout << "To use this method you have to click 3 clicks\n"
+                                "1- the first one is the center.\n"
+                                "2- the second one is the horizontal radius.\n"
+                                "3- and the third one is the vertical radius.\n";
+                    }else if(points.size() < 3){
+                        cout << "Please Enter the 3 points you only clicked " << points.size() << "points" << endl;
+                        if(points.size()  == 1){
+                            cout << "You still didn't click for the horizontal radius (a) and the vertical radius (b)." << endl;
+                        }
+                        else if(points.size() == 2){
+                            cout << "You still didn't click for the the vertical radius (b)" <<endl;
+                        }
+                    }else {
+                        int a = CalcRadius(points[0], points[1]);
+                        int b = CalcRadius(points[0], points[2]);
+                        cout << a << endl;
+                        cout << b << endl;
+                        DrawEllipsePolar(hdc, points[0], a, b, c);
+                        screen.emplace_back(ELLIPSE_POLAR, points, currColor);
+                        points.clear();
+                    }
                     break;
                 }
                 case ELLIPSE_MIDPOINT:
                 {
-                    int a = CalcRadius(points[0], points[1]);
-                    int b = CalcRadius(points[0], points[2]);
-                    cout << a << endl;
-                    cout << b << endl;
-                    DrawEllipseMidpoint(hdc, points[0], a, b, c);
-                    screen.emplace_back(ELLIPSE_MIDPOINT, points,currColor);
-                    points.clear();
+                    if (points.empty()) {
+                        cout << "To use this method you have to click 3 clicks\n"
+                                "1- the first one is the center.\n"
+                                "2- the second one is the horizontal radius.\n"
+                                "3- and the third one is the vertical radius.\n";
+                    }else if(points.size() < 3){
+                        cout << "Please Enter the 3 points you only clicked " << points.size() << "points" << endl;
+                        if(points.size()  == 1){
+                            cout << "You still didn't click for the horizontal radius (a) and the vertical radius (b)." << endl;
+                        }
+                        else if(points.size() == 2){
+                            cout << "You still didn't click for the the vertical radius (b)" <<endl;
+                        }
+                    }else {
+                        int a = CalcRadius(points[0], points[1]);
+                        int b = CalcRadius(points[0], points[2]);
+                        cout << a << endl;
+                        cout << b << endl;
+                        DrawEllipseMidpoint(hdc, points[0], a, b, c);
+                        screen.emplace_back(ELLIPSE_MIDPOINT, points, currColor);
+                        points.clear();
+                    }
                     break;
                 }
                 case CLIPPING_USING_RECTANGLE_LINE:
@@ -383,9 +427,14 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout << "Please Enter the line 2 points and draw a Rectangle" << endl;
                         break;
                     } else if (points.size() == 2) {
-                        cout << "Please Enter the line 2 points and draw a line" << endl;
+                        cout << "Please Enter the line 2 points and draw a a rec" << endl;
+                        DrawRectangle(hdc,points[0],points[1],c);
+                        screen.emplace_back(DRAW_RECTANGLE,points,currColor);
                         break;
-                    } else if (points.size() >= 4) {
+                    }else if(points.size() < 4){
+                        cout << "Enter 2 points to draw a line." << endl;
+                    }
+                    else if (points.size() >= 4) {
                         CohenSuth(hdc, points[points.size() - 2], points[points.size() - 1],
                                   points[points.size() - 4].x, points[points.size() - 3].y, points[points.size() - 3].x,
                                   points[points.size() - 4].y, c);
@@ -644,64 +693,8 @@ void AddMenus(HWND hWnd) {
 }
 
 // starting point of execution
-int round(double point) {
-    // check the nearest integer point ( to determine whether to round down or up )
-    if (point - (int) point > 0.5)
-        return (int) point + 1;
-    else
-        return (int) point;
-}
 
-int max(int x, int y) {
-    return (x > y ? x : y);
-}
 
-template<typename T>
-T pow(T x, unsigned int y) {
-    if (y == 0)
-        return 1;
-    else if (y % 2 == 0)
-        return pow(x, y / 2) * pow(x, y / 2);
-    else
-        return x * pow(x, y / 2) * pow(x, y / 2);
-}
-
-template<typename T>
-T sqrt(T x) {
-    T i = 0;
-    while ((i * i) <= x) {
-        i++;
-    }
-    return i - 1;
-}
-
-template<typename T>
-T sin(T x) {
-    // sin(x) = x - x^3/3! + x^5/5! - x^7/7! + ...
-    T sinx = x;
-    for (int i = 1; i <= 5; i++) {
-        if (i % 2 == 0) {
-            sinx += (pow(x, 2 * i + 1) / (2 * i + 1));
-        } else {
-            sinx -= (pow(x, 2 * i + 1) / (2 * i + 1));
-        }
-    }
-    return sinx;
-}
-
-template<typename T>
-T cos(T x) {
-    // cos(x) = 1 - x^2/2! + x^4/4! - x^6/6! + ...
-    T cosx = 1;
-    for (int i = 1; i <= 5; i++) {
-        if (i % 2 == 0) {
-            cosx += (pow(x, 2 * i) / (2 * i));
-        } else {
-            cosx -= (pow(x, 2 * i) / (2 * i));
-        }
-    }
-    return cosx;
-}
 
 void MidPointLine(HDC hdc, point p1, point p2, COLORREF c) {
     int dx = p2.x - p1.x;
@@ -852,7 +845,8 @@ void drawLine_parametric(HDC hdc, point p1, point p2, COLORREF color) {
     auto y =(float) y1;
     // loop until x1=x2 and y1=y2
     while (x <= p2.x) {
-        SetPixel(hdc, x, round(y), color);
+        float (*Round)(float) = round;
+        SetPixel(hdc, x, Round(y), color);
         x += 1;
         y += slope;
     }
@@ -1021,10 +1015,8 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
 
     OutCode out1 = GetOutCode(pStart, xleft, ytop, xright, ybottom);
     OutCode out2 = GetOutCode(pEnd, xleft, ytop, xright, ybottom);
-    cout << "hello1" << endl;
     while ((out1.All || out2.All) && !(out1.All & out2.All)) {
         int xi, yi;
-        cout << "hello2" << endl;
         if (out1.All) {
             if (out1.left)
                 VIntersect(pStart, pEnd, xleft, &xi, &yi);
@@ -1038,7 +1030,6 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
             pStart.y = yi;
 
             out1 = GetOutCode(pStart, xleft, ytop, xright, ybottom);
-            cout << "HERE1" << endl;
         } else {
             if (out2.left)
                 VIntersect(pStart, pEnd, xleft, &xi, &yi);
@@ -1051,14 +1042,11 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
             pEnd.x = xi;
             pEnd.y = yi;
             out2 = GetOutCode(pEnd, xleft, ytop, xright, ybottom);
-            cout << "HERE2" << endl;
         }
     }
     if (!out1.All && !out2.All) {
         drawLine_DDA(hdc, pStart, pEnd, c);
-        cout << "HERE3" << endl;
     }
-    cout << "HERE4" << endl;
 }
 
 void DrawPolygon(HDC hdc, vector <point> p, COLORREF color) {
@@ -1118,7 +1106,7 @@ point HIntersect(point &v1, point &v2, int yedge) {
 
 void PolygonClip(HDC hdc, vector <point> &p, int n, int xleft, int ytop, int xright, int ybottom) {
     VertexList vlist;
-    for (int i = 2; i < n; i++)vlist.push_back(point(p[i].x, p[i].y));
+    for (int i = 0; i < n; i++)vlist.push_back(point(p[i].x, p[i].y));
     vlist = ClipWithEdge(vlist, xleft, InLeft, VIntersect);
     vlist = ClipWithEdge(vlist, ytop, InTop, HIntersect);
     vlist = ClipWithEdge(vlist, xright, InRight, VIntersect);
@@ -1191,25 +1179,22 @@ void DrawEllipseDirect(HDC hdc, point p, int a, int b, COLORREF c)
     int yc = p.y;
     int x = 0;
     double y = b;
-    Draw4points(hdc, xc, yc, x, Round(y), c);
+    Draw4points(hdc, xc, yc, x, round(y), c);
     while (x * b * b < y * a * a)
     {
         x++;
         y = b * sqrt(1 - (x * x * 1.0) / (a * a));
-        Draw4points(hdc, xc, yc, x, Round(y), c);
-        cout << "Here1" << endl;
+        Draw4points(hdc, xc, yc, x, round(y), c);
     }
     int y1 = 0;
     double x1 = a;
-    Draw4points(hdc, xc, yc, Round(x1), y1, c);
-    cout << "Here2" << endl;
+    Draw4points(hdc, xc, yc, round(x1), y1, c);
 
     while (x1 * b * b > y1 * a * a)
     {
         y1++;
         x1 = a * sqrt(1 - (y1 * y1 * 1.0) / (b * b));
-        Draw4points(hdc, xc, yc, Round(x1), y1, c);
-        cout << "Here3" << endl;
+        Draw4points(hdc, xc, yc, round(x1), y1, c);
 
     }
 }
