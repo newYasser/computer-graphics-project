@@ -33,21 +33,22 @@ using namespace std;
 #define CLIPPING_USING_SQUARE_POLYGON 26
 #define DRAW_RECTANGLE 27
 #define DRAW_POLYGON 28
-#define OTHER_OPTIONS_SAVE 29
-#define OTHER_OPTIONS_RELOAD 30
-#define OTHER_OPTIONS_CLEAR 31
-#define COLOR_RED 32
-#define COLOR_GREEN 33
-#define COLOR_BLUE 34
-#define COLOR_BLACK 35
-#define COLOR_WHITE 36
-#define COLOR_YELLOW 37
-#define COLOR_ORANGE 38
-#define COLOR_PURPLE 39
-#define COLOR_PINK 40
-#define COLOR_BROWN 41
-#define COLOR_GRAY 42
-#define COLOR_CYAN 43
+#define TWO_CIRCLES_AND_FILL 29
+#define OTHER_OPTIONS_SAVE 30
+#define OTHER_OPTIONS_RELOAD 31
+#define OTHER_OPTIONS_CLEAR 32
+#define COLOR_RED 33
+#define COLOR_GREEN 34
+#define COLOR_BLUE 35
+#define COLOR_BLACK 36
+#define COLOR_WHITE 37
+#define COLOR_YELLOW 38
+#define COLOR_ORANGE 39
+#define COLOR_PURPLE 40
+#define COLOR_PINK 41
+#define COLOR_BROWN 42
+#define COLOR_GRAY 43
+#define COLOR_CYAN 44
 
 
 
@@ -127,6 +128,11 @@ void drawCircle_MidPoint(HDC, point, point, COLORREF);
 
 void drawCircle_ModifiedMidPoint(HDC, point, point, COLORREF);
 
+void drawCircle_FillingWithLines(HDC, point, point,point, COLORREF);
+
+void drawCircle_FillingWithCircles(HDC, point, point, point, COLORREF);
+
+void drawTwoCirclesAndFill(HDC, point, point,point,point , COLORREF);
 
 void DrawRectangle(HDC hdc, point, point, COLORREF);
 
@@ -228,9 +234,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     //points.clear();
                     break;
                 case LINE_MID_POINT:
-                    if (points.size() < 2) {
+                    if (points.size() ==0) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the start point"<<endl;
+                        cout<<"now enter the end point"<<endl;
                         break;
                     }
                     else{
@@ -243,9 +252,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case LINE_DDA:
-                    if (points.size() < 2) {
+                    if (points.size() ==0) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the start point"<<endl;
+                        cout<<"now enter the end point"<<endl;
                         break;
                     }
                     else{
@@ -258,9 +270,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case LINE_PARAMETRIC:
-                    if(points.size() < 2){
+                    if (points.size() ==0) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the start point"<<endl;
+                        cout<<"now enter the end point"<<endl;
                         break;
                     }
                     else{
@@ -273,9 +288,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_DIRECT:
-                    if(points.size() < 2){
+                    if(points.size() ==0 ){
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center"<<endl;
+                        cout<<"now enter the radius"<<endl;
                         break;
                     }
                     else{
@@ -288,9 +306,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_POLAR:
-                    if(points.size() < 2){
+                    if(points.size() ==0 ){
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center"<<endl;
+                        cout<<"now enter the radius"<<endl;
                         break;
                     }
                     else{
@@ -303,9 +324,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_ITERATIVE_POLAR:
-                    if(points.size() < 2){
+                    if(points.size() ==0 ){
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center"<<endl;
+                        cout<<"now enter the radius"<<endl;
                         break;
                     }
                     else{
@@ -318,9 +342,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_MIDPOINT:
-                    if(points.size() < 2){
+                    if(points.size() ==0 ){
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center"<<endl;
+                        cout<<"now enter the radius"<<endl;
                         break;
                     }
                     else{
@@ -333,9 +360,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_MODIFIED_MIDPOINT:
-                    if(points.size() < 2){
+                    if(points.size() ==0 ){
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
-                        points.clear();
+                        break;
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center"<<endl;
+                        cout<<"now enter the radius"<<endl;
                         break;
                     }
                     else{
@@ -347,6 +377,84 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         points.clear();
                         break;
                     }
+                case FILLING_CIRCLE_WITH_LINES:
+                    if(points.size() ==0 ){
+                        cout << "To use this method you have to click 3 clicks\n"
+                                "1- the first one is the center.\n"
+                                "2- the second one is the radius.\n"
+                                "3- and the third one is the quarter of the circle you want to fill with lines.\n";
+
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center"<<endl;
+                        cout<<"now enter the radius and the quarter"<<endl;
+                    } else if(points.size() == 2){
+                        cout<<"great you have entered the radius and the center"<<endl;
+                        cout<<"now enter the quarter"<<endl;
+                    }
+                    else{
+                        drawCircle_FillingWithLines(hdc, points[points.size() - 3], points[points.size() - 2], points[points.size() - 1], c);
+                        cout<< "The Shape is: Circle and the Algorithm is: Filling Circle With Lines" << endl;
+                        cout<< " 1st point (Center of the circle): " << points[points.size() - 3].x << " " << points[points.size() - 3].y << endl;
+                        cout<< " 2nd point (point on the circle to get radius):" << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
+                        cout<< " 3rd point (point to get the number of quarter to fill with lines): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
+                        screen.emplace_back(FILLING_CIRCLE_WITH_LINES, points,currColor);
+                        points.clear();
+                    }
+                    break;
+                case FILLING_CIRCLE_WITH_CIRCLES:
+                    if(points.size() ==0 ){
+                        cout << "To use this method you have to click 3 clicks\n"
+                                "1- the first one is the center.\n"
+                                "2- the second one is the radius.\n"
+                                "3- and the third one is the quarter of the circle you want to fill with circles.\n";
+
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center"<<endl;
+                        cout<<"now enter the radius and the quarter"<<endl;
+                    } else if(points.size() == 2){
+                        cout<<"great you have entered the radius and the center"<<endl;
+                        cout<<"now enter the quarter"<<endl;
+                    }
+                    else{
+                        drawCircle_FillingWithCircles(hdc, points[points.size() - 3], points[points.size() - 2], points[points.size() - 1], c);
+                        cout<< "The Shape is: Circle and the Algorithm is: Filling Circle With Circles" << endl;
+                        cout<< " 1st point (Center of the circle): " << points[points.size() - 3].x << " " << points[points.size() - 3].y << endl;
+                        cout<< " 2nd point (point on the circle to get radius):" << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
+                        cout<< " 3rd point (point to get the number of quarter to fill with circles): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
+                        screen.emplace_back(FILLING_CIRCLE_WITH_CIRCLES, points,currColor);
+                        points.clear();
+                    }
+                    break;
+                case TWO_CIRCLES_AND_FILL:
+                    if(points.size() ==0 ){
+                        cout << "To use this method you have to click 4 clicks\n"
+                                "1- the first one is the center of the first circle.\n"
+                                "2- the second one is the radius of the first circle.\n"
+                                "3- the third one is the center of the second circle.\n"
+                                "4- the fourth one is the radius of the second circle.\n";
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the center of the first circle"<<endl;
+                        cout<<"now enter the radius of the first circle and the center and radius of the second circle"<<endl;
+                    } else if(points.size() == 2){
+                        cout<<"great you have entered the center and radius of the first circle"<<endl;
+                        cout<<"now enter the center and radius of the second circle"<<endl;
+                    }
+                    else if (points.size()==3){
+                        cout<<"great you have entered the center and radius of the first circle and the center of the second circle"<<endl;
+                        cout<<"now enter the radius of the second circle"<<endl;
+                    }
+                    else{
+                        drawTwoCirclesAndFill(hdc, points[points.size() - 4], points[points.size() - 3], points[points.size() - 2], points[points.size() - 1], c);
+                        cout<< "The Shape is: Two Circles and the Algorithm is: Two Circles and Fill" << endl;
+                        cout<< " 1st point (Center of the first circle): " << points[points.size() - 4].x << " " << points[points.size() - 4].y << endl;
+                        cout<< " 2nd point (point on the first circle to get radius):" << points[points.size() - 3].x << " " << points[points.size() - 3].y << endl;
+                        cout<< " 3rd point (Center of the second circle): " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
+                        cout<< " 4th point (point on the second circle to get radius):" << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
+                        screen.emplace_back(TWO_CIRCLES_AND_FILL, points,currColor);
+                        points.clear();
+                    }
+                    break;
+
                 case ELLIPSE_DIRECT:{
                     if (points.empty()) {
                         cout << "To use this method you have to click 3 clicks\n"
@@ -656,6 +764,7 @@ void AddMenus(HWND hWnd) {
 
     AppendMenu(hDraw, MF_STRING, DRAW_RECTANGLE, "RECTANGLE");
     AppendMenu(hDraw, MF_STRING, DRAW_POLYGON, "POLYGON");
+    AppendMenu(hDraw, MF_STRING, TWO_CIRCLES_AND_FILL, "TWO CIRCLES AND FILL");
 
     AppendMenu(hOtherOptions, MF_STRING, OTHER_OPTIONS_SAVE, "Save");
     AppendMenu(hOtherOptions, MF_STRING, OTHER_OPTIONS_RELOAD, "Reload");
@@ -894,8 +1003,8 @@ void drawCircle_Polar(HDC hdc, point p1, point p2, COLORREF color) {
     while (x <= y) {
         DrawEightPoints(hdc, x1, y1, x, y, color);
         theta += dtheta;
-        x = round(radius * cos(theta));
-        y = round(radius * sin(theta));
+        x = round(radius * sin(theta));
+        y = round(radius * cos(theta));
     }
 }
 
@@ -944,7 +1053,7 @@ void drawCircle_ModifiedMidPoint(HDC hdc, point p1, point p2, COLORREF color) {
     // get x1, y1, x2, y2 from p1, p2
     int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
     // calculate radius of circle
-    int radius =  pow(y2 - y1, 2)+ pow(x2 - x1, 2);
+    int radius =  sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
     // initialize starting point
     int x = 0, y = radius;
     // initialize decision parameter
@@ -967,6 +1076,52 @@ void drawCircle_ModifiedMidPoint(HDC hdc, point p1, point p2, COLORREF color) {
         constant1 += 2;
         x++;
     }
+}
+
+int getQuarter(point center,point radius,point p){
+    if(p.x<center.x && p.y<center.y) return 2;
+    if(p.x>center.x && p.y<center.y) return 1;
+    if(p.x>center.x && p.y>center.y) return 4;
+    if(p.x<center.x && p.y>center.y) return 3;
+    return 0;
+}
+void drawCircle_FillingWithLines(HDC hdc, point  p1, point p2,point p3, COLORREF color){
+    int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+    int radius = sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
+    drawCircle_ModifiedMidPoint(hdc,p1,p2,color);
+    for (int i = x1 - radius; i <= x1 + radius; i++)
+    {
+        SetPixel(hdc, i, y1, color);
+    }
+    for (int j = y1 - radius; j <= y1 + radius; j++)
+    {
+        SetPixel(hdc, x1, j, color);
+    }
+    int quarter = getQuarter(p1,p2,p3);
+
+
+
+}
+
+void drawCircle_FillingWithCircles(HDC hdc, point  p1, point p2,point p3, COLORREF color){
+    int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+    int radius = sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
+    drawCircle_ModifiedMidPoint(hdc,p1,p2,color);
+    for (int i = x1 - radius; i <= x1 + radius; i++)
+    {
+        SetPixel(hdc, i, y1, color);
+    }
+    for (int j = y1 - radius; j <= y1 + radius; j++)
+    {
+        SetPixel(hdc, x1, j, color);
+    }
+    int quarter = getQuarter(p1,p2,p3);
+
+
+}
+
+void drawTwoCirclesAndFill(HDC hdc, point p1 , point p2,point p3 ,point p4, COLORREF color){
+
 }
 
 void DrawRectangle(HDC hdc, point p1, point p2, COLORREF c) {
