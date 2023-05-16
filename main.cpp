@@ -173,6 +173,8 @@ void DrawEllipseMidpoint(HDC , point , int , int , COLORREF );
 double CalcRadius(point, point );
 
 
+void FillIntersectingArea(HDC pHdc, point point1, double radius1, point point2, double radius2, COLORREF color);
+
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdshow) {
     WNDCLASSW wc = {0};
     wc.hbrBackground = (HBRUSH) COLOR_WINDOW;
@@ -462,6 +464,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                             cout << " 2nd point (point on the circle to get radius):" << p2.x << " " << p2.y << endl;
                             cout << " 3rd point (point to get the number of quarter to fill with lines): " << p3.x << " "<< p3.y << endl;
                             screen.emplace_back(FILLING_CIRCLE_WITH_LINES, points, currColor);
+                            p1.x=p1.y=p2.x=p2.y=-1;
                             circleFillingFlag = false;
                             points.clear();
                         }
@@ -1177,14 +1180,12 @@ void drawCircle_FillingWithLines(HDC hdc, point  p1, point p2,int quarter, COLOR
     }
 }
 
-void drawCircle_FillingWithCircles(HDC hdc, point  p1, point p2,int quarter, COLORREF color){
+void drawCircle_FillingWithCircles(HDC hdc, point  p1, point p2,int quarter, COLORREF color) {
     int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
-    int radius = sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
-    // i want to draw lines between the center and the radius point in specific quarter
-    // and use MidPoint line method to draw the lines
+    double radius = CalcRadius(p1, p2);
     double sAngel = 0;
     double eAngel = 0;
-    switch (quarter){
+    switch (quarter) {
         case 1:
             sAngel = 0;
             eAngel = 90;
@@ -1203,11 +1204,19 @@ void drawCircle_FillingWithCircles(HDC hdc, point  p1, point p2,int quarter, COL
             break;
     }
     int sRadius = 0;
+    int eRadius = radius;
+    for(; sRadius<2*eRadius; sRadius+=1)
+    {
+        for (double i = sAngel; i < eAngel; i += 0.1)
+        {
+            int x = x1 + static_cast<int>(sRadius / 2 * cos(i * 3.14159 / 180.0));
+            int y = y1 - static_cast<int>(sRadius / 2 * sin(i * 3.14159 / 180.0));
+            SetPixel(hdc, x, y, color);
+        }
 
-
-
-
+    }
 }
+
 
 
 void drawTwoCirclesAndFill(HDC hdc, point p1 , point p2,point p3 ,point p4, COLORREF color){
@@ -1226,14 +1235,25 @@ void drawTwoCirclesAndFill(HDC hdc, point p1 , point p2,point p3 ,point p4, COLO
         cout<<"Nested Circles\n";
     else{
         cout<<"Intersecting Circles\n";
-//        FillIntersectingArea(hdc,p1,radius1,p3,radius2,color);
+        FillIntersectingArea(hdc,p1,radius1,p3,radius2,color);
     }
-
-
-
-
 }
 
+void FillIntersectingArea(HDC hdc, point circle1Center, double circle1Radius, point circle2Center, double circle2Radius, COLORREF color) {
+    int left = max(circle1Center.x - circle1Radius, circle2Center.x - circle2Radius);
+    int top = max(circle1Center.y - circle1Radius, circle2Center.y - circle2Radius);
+    int right = min(circle1Center.x + circle1Radius, circle2Center.x + circle2Radius);
+    int bottom = min(circle1Center.y + circle1Radius, circle2Center.y + circle2Radius);
+    for (int y = top; y <= bottom; y++) {
+        for (int x = left; x <= right; x++) {
+            double distance1 = sqrt(pow(x - circle1Center.x, 2) + pow(y - circle1Center.y, 2));
+            double distance2 = sqrt(pow(x - circle2Center.x, 2) + pow(y - circle2Center.y, 2));
+            if (distance1 <= circle1Radius && distance2 <= circle2Radius) {
+                SetPixel(hdc, x, y, color);
+            }
+        }
+    }
+}
 
 
 
