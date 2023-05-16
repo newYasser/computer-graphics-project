@@ -1235,26 +1235,21 @@ void drawTwoCirclesAndFill(HDC hdc, point p1 , point p2,point p3 ,point p4, COLO
         cout<<"Nested Circles\n";
     else{
         cout<<"Intersecting Circles\n";
-        FillIntersectingArea(hdc,p1,radius1,p3,radius2,color);
-    }
-}
-
-void FillIntersectingArea(HDC hdc, point circle1Center, double circle1Radius, point circle2Center, double circle2Radius, COLORREF color) {
-    int left = max(circle1Center.x - circle1Radius, circle2Center.x - circle2Radius);
-    int top = max(circle1Center.y - circle1Radius, circle2Center.y - circle2Radius);
-    int right = min(circle1Center.x + circle1Radius, circle2Center.x + circle2Radius);
-    int bottom = min(circle1Center.y + circle1Radius, circle2Center.y + circle2Radius);
-    for (int y = top; y <= bottom; y++) {
-        for (int x = left; x <= right; x++) {
-            double distance1 = sqrt(pow(x - circle1Center.x, 2) + pow(y - circle1Center.y, 2));
-            double distance2 = sqrt(pow(x - circle2Center.x, 2) + pow(y - circle2Center.y, 2));
-            if (distance1 <= circle1Radius && distance2 <= circle2Radius) {
-                SetPixel(hdc, x, y, color);
+        int left = max(circle1Center.x - circle1Radius, circle2Center.x - circle2Radius);
+        int top = max(circle1Center.y - circle1Radius, circle2Center.y - circle2Radius);
+        int right = min(circle1Center.x + circle1Radius, circle2Center.x + circle2Radius);
+        int bottom = min(circle1Center.y + circle1Radius, circle2Center.y + circle2Radius);
+        for (int y = top; y <= bottom; y++) {
+            for (int x = left; x <= right; x++) {
+                double distance1 = sqrt(pow(x - circle1Center.x, 2) + pow(y - circle1Center.y, 2));
+                double distance2 = sqrt(pow(x - circle2Center.x, 2) + pow(y - circle2Center.y, 2));
+                if (distance1 <= circle1Radius && distance2 <= circle2Radius) {
+                    SetPixel(hdc, x, y, color);
+                }
             }
         }
     }
 }
-
 
 
 void DrawRectangle(HDC hdc, point p1, point p2, COLORREF c) {
