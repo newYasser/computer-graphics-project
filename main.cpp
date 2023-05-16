@@ -11,28 +11,29 @@ using namespace std;
 #define LINE_PARAMETRIC 3
 #define CIRCLE_DIRECT 4
 #define CIRCLE_POLAR 5
-#define CIRCLE_ITERATIVE_POLAR 7
-#define CIRCLE_MIDPOINT 8
-#define CIRCLE_MODIFIED_MIDPOINT 9
-#define FILLING_CIRCLE_WITH_LINES 10
-#define FILLING_CIRCLE_WITH_CIRCLES 11
-#define FILLING_SQUARE_WITH_HERMIT_CURVE 12
-#define FILLING_RECTANGLE_WITH_BEZIER_CURVE 13
-#define FILLING_CONVEX 14
-#define FILLING_NON_CONVEX 15
-#define FLOOD_FILL_RECURSIVE 16
-#define FLOOD_FILL_NON_RECURSIVE 17
-#define CARDINAL_SPLINE_CURVE 18
-#define ELLIPSE_DIRECT 19
-#define ELLIPSE_POLAR 20
-#define ELLIPSE_MIDPOINT 21
-#define CLIPPING_USING_RECTANGLE_POINT 22
-#define CLIPPING_USING_RECTANGLE_LINE 23
-#define CLIPPING_USING_RECTANGLE_POLYGON 24
-#define CLIPPING_USING_SQUARE_LINE 25
-#define CLIPPING_USING_SQUARE_POLYGON 26
-#define DRAW_RECTANGLE 27
-#define DRAW_POLYGON 28
+#define CIRCLE_ITERATIVE_POLAR 6
+#define CIRCLE_MIDPOINT 7
+#define CIRCLE_MODIFIED_MIDPOINT 8
+#define FILLING_CIRCLE_WITH_LINES 9
+#define FILLING_CIRCLE_WITH_CIRCLES 10
+#define FILLING_SQUARE_WITH_HERMIT_CURVE 11
+#define FILLING_RECTANGLE_WITH_BEZIER_CURVE 12
+#define FILLING_CONVEX 13
+#define FILLING_NON_CONVEX 14
+#define FLOOD_FILL_RECURSIVE 15
+#define FLOOD_FILL_NON_RECURSIVE 16
+#define CARDINAL_SPLINE_CURVE 17
+#define ELLIPSE_DIRECT 18
+#define ELLIPSE_POLAR 19
+#define ELLIPSE_MIDPOINT 20
+#define CLIPPING_USING_RECTANGLE_POINT 21
+#define CLIPPING_USING_RECTANGLE_LINE 22
+#define CLIPPING_USING_RECTANGLE_POLYGON 23
+#define CLIPPING_USING_SQUARE_LINE 24
+#define CLIPPING_USING_SQUARE_POLYGON 25
+#define DRAW_RECTANGLE 26
+#define DRAW_POLYGON 27
+#define CIRCLE_AND_FILL 28
 #define TWO_CIRCLES_AND_FILL 29
 #define OTHER_OPTIONS_SAVE 30
 #define OTHER_OPTIONS_RELOAD 31
@@ -127,10 +128,11 @@ void drawCircle_IterativePolar(HDC, point, point, COLORREF);
 void drawCircle_MidPoint(HDC, point, point, COLORREF);
 
 void drawCircle_ModifiedMidPoint(HDC, point, point, COLORREF);
+int getQuarter(point center,point radius,point p);
 
-void drawCircle_FillingWithLines(HDC, point, point,point, COLORREF);
+void drawCircle_FillingWithLines(HDC, point, point,int, COLORREF);
 
-void drawCircle_FillingWithCircles(HDC, point, point, point, COLORREF);
+void drawCircle_FillingWithCircles(HDC, point, point, int, COLORREF);
 
 void drawTwoCirclesAndFill(HDC, point, point,point,point , COLORREF);
 
@@ -202,6 +204,11 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
     static vector <point> points;
     static list <algorithm> screen;
     static int currColor=COLOR_RED;
+    static point p1;
+   static bool circleFillingFlag=false;
+    static point p2;
+    static point p3;
+
 
     switch (msg) {
         case WM_LBUTTONDOWN: {
@@ -215,7 +222,6 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
 /* when something is clicked anything here will be performed
  * the w parameter determine which item is clicked
  */
-
         case WM_COMMAND: {
 
             switch (wp) {
@@ -233,196 +239,257 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     screen.emplace_back(DRAW_POLYGON, points, currColor);
                     //points.clear();
                     break;
+                case CIRCLE_AND_FILL: {
+
+                    if (points.size() == 0) {
+                        cout << "To use this method you have to click 2 clicks\n"
+                                "1- the first one is the center.\n"
+                                "2- the second one is the radius.\n";
+
+
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the center" << endl;
+                        cout << "now enter the radius" << endl;
+                    } else {
+                        p1 = points[points.size() - 2];
+                        p2 = points[points.size() - 1];
+                        drawCircle_ModifiedMidPoint(hdc, p1, p2, c);
+                        int radius = (int) CalcRadius(p1, p2);
+                        point l1s;
+                        point l1e;
+                        point l2s;
+                        point l2e;
+                        l1s.x = p1.x - radius;
+                        l1s.y = p1.y;
+                        l1e.x = p1.x + radius;
+                        l1e.y = p1.y;
+                        l2s.x = p1.x;
+                        l2s.y = p1.y - radius;
+                        l2e.x = p1.x;
+                        l2e.y = p1.y + radius;
+                        MidPointLine(hdc, l1s, l1e, c);
+                        vector <point> ptemp1;
+                        ptemp1.push_back(l1s);
+                        ptemp1.push_back(l1e);
+
+                        MidPointLine(hdc, l2s, l2e, c);
+                        vector <point> ptemp2;
+                        ptemp2.push_back(l2s);
+                        ptemp2.push_back(l2e);
+                        screen.emplace_back(CIRCLE_AND_FILL, points, currColor);
+                        ptemp1.clear();
+                        ptemp2.clear();
+                        points.clear();
+                        cout<<"Now to fill the circle you have to click on filling"<<endl;
+                        circleFillingFlag=true;
+                    }
+
+                    break;
+                }
                 case LINE_MID_POINT:
-                    if (points.size() ==0) {
+                    if (points.size() == 0) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the start point"<<endl;
-                        cout<<"now enter the end point"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the start point" << endl;
+                        cout << "now enter the end point" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         MidPointLine(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is : Line and the Algorithm is : Mid Point" << endl;
-                        cout<<"Start Point : ("<<points[points.size() - 2].x<<","<<points[points.size() - 2].y<<")"<<endl;
-                        cout<<"End Point : ("<<points[points.size() - 1].x<<","<<points[points.size() - 1].y<<")"<<endl;
-                        screen.emplace_back(LINE_MID_POINT, points,currColor);
+                        cout << "The Shape is : Line and the Algorithm is : Mid Point" << endl;
+                        cout << "Start Point : (" << points[points.size() - 2].x << "," << points[points.size() - 2].y
+                             << ")" << endl;
+                        cout << "End Point : (" << points[points.size() - 1].x << "," << points[points.size() - 1].y
+                             << ")" << endl;
+                        screen.emplace_back(LINE_MID_POINT, points, currColor);
                         points.clear();
                         break;
                     }
                 case LINE_DDA:
-                    if (points.size() ==0) {
+                    if (points.size() == 0) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the start point"<<endl;
-                        cout<<"now enter the end point"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the start point" << endl;
+                        cout << "now enter the end point" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         drawLine_DDA(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is : Line and the Algorithm is : DDA" << endl;
-                        cout<<"Start Point : ("<<points[points.size() - 2].x<<","<<points[points.size() - 2].y<<")"<<endl;
-                        cout<<"End Point : ("<<points[points.size() - 1].x<<","<<points[points.size() - 1].y<<")"<<endl;
-                        screen.emplace_back(LINE_DDA, points,currColor);
+                        cout << "The Shape is : Line and the Algorithm is : DDA" << endl;
+                        cout << "Start Point : (" << points[points.size() - 2].x << "," << points[points.size() - 2].y
+                             << ")" << endl;
+                        cout << "End Point : (" << points[points.size() - 1].x << "," << points[points.size() - 1].y
+                             << ")" << endl;
+                        screen.emplace_back(LINE_DDA, points, currColor);
                         points.clear();
                         break;
                     }
                 case LINE_PARAMETRIC:
-                    if (points.size() ==0) {
+                    if (points.size() == 0) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the start point"<<endl;
-                        cout<<"now enter the end point"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the start point" << endl;
+                        cout << "now enter the end point" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         drawLine_parametric(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is : Line and the Algorithm is : Parametric" << endl;
-                        cout<<"Start Point : ("<<points[points.size() - 2].x<<","<<points[points.size() - 2].y<<")"<<endl;
-                        cout<<"End Point : ("<<points[points.size() - 1].x<<","<<points[points.size() - 1].y<<")"<<endl;
-                        screen.emplace_back(LINE_PARAMETRIC, points,currColor);
+                        cout << "The Shape is : Line and the Algorithm is : Parametric" << endl;
+                        cout << "Start Point : (" << points[points.size() - 2].x << "," << points[points.size() - 2].y
+                             << ")" << endl;
+                        cout << "End Point : (" << points[points.size() - 1].x << "," << points[points.size() - 1].y
+                             << ")" << endl;
+                        screen.emplace_back(LINE_PARAMETRIC, points, currColor);
                         points.clear();
                         break;
                     }
                 case CIRCLE_DIRECT:
-                    if(points.size() ==0 ){
-                        cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
+                    if (points.size() == 0) {
+                        cout << "Please Enter 2 points at least first one is the center and the second is the radius"
+                             << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the center"<<endl;
-                        cout<<"now enter the radius"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the center" << endl;
+                        cout << "now enter the radius" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         drawCircle_Direct(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is: Circle and the Algorithm is: Direct" << endl;
-                        cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
-                        cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_DIRECT, points,currColor);
+                        cout << "The Shape is: Circle and the Algorithm is: Direct" << endl;
+                        cout << " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y
+                             << endl;
+                        cout << " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y
+                             << endl;
+                        screen.emplace_back(CIRCLE_DIRECT, points, currColor);
                         points.clear();
                         break;
                     }
                 case CIRCLE_POLAR:
-                    if(points.size() ==0 ){
-                        cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
+                    if (points.size() == 0) {
+                        cout << "Please Enter 2 points at least first one is the center and the second is the radius"
+                             << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the center"<<endl;
-                        cout<<"now enter the radius"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the center" << endl;
+                        cout << "now enter the radius" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         drawCircle_Polar(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is: Circle and the Algorithm is: Polar" << endl;
-                        cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
-                        cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_POLAR, points,currColor);
+                        cout << "The Shape is: Circle and the Algorithm is: Polar" << endl;
+                        cout << " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y
+                             << endl;
+                        cout << " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y
+                             << endl;
+                        screen.emplace_back(CIRCLE_POLAR, points, currColor);
                         points.clear();
                         break;
                     }
                 case CIRCLE_ITERATIVE_POLAR:
-                    if(points.size() ==0 ){
-                        cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
+                    if (points.size() == 0) {
+                        cout << "Please Enter 2 points at least first one is the center and the second is the radius"
+                             << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the center"<<endl;
-                        cout<<"now enter the radius"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the center" << endl;
+                        cout << "now enter the radius" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         drawCircle_IterativePolar(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is: Circle and the Algorithm is: Iterative Polar" << endl;
-                        cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
-                        cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_ITERATIVE_POLAR, points,currColor);
+                        cout << "The Shape is: Circle and the Algorithm is: Iterative Polar" << endl;
+                        cout << " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y
+                             << endl;
+                        cout << " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y
+                             << endl;
+                        screen.emplace_back(CIRCLE_ITERATIVE_POLAR, points, currColor);
                         points.clear();
                         break;
                     }
                 case CIRCLE_MIDPOINT:
-                    if(points.size() ==0 ){
-                        cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
+                    if (points.size() == 0) {
+                        cout << "Please Enter 2 points at least first one is the center and the second is the radius"
+                             << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the center"<<endl;
-                        cout<<"now enter the radius"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the center" << endl;
+                        cout << "now enter the radius" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         drawCircle_MidPoint(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is: Circle and the Algorithm is: Midpoint" << endl;
-                        cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
-                        cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_MIDPOINT, points,currColor);
+                        cout << "The Shape is: Circle and the Algorithm is: Midpoint" << endl;
+                        cout << " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y
+                             << endl;
+                        cout << " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y
+                             << endl;
+                        screen.emplace_back(CIRCLE_MIDPOINT, points, currColor);
                         points.clear();
                         break;
                     }
                 case CIRCLE_MODIFIED_MIDPOINT:
-                    if(points.size() ==0 ){
-                        cout << "Please Enter 2 points at least first one is the center and the second is the radius" << endl;
+                    if (points.size() == 0) {
+                        cout << "Please Enter 2 points at least first one is the center and the second is the radius"
+                             << endl;
                         break;
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the center"<<endl;
-                        cout<<"now enter the radius"<<endl;
+                    } else if (points.size() == 1) {
+                        cout << "great you have entered the center" << endl;
+                        cout << "now enter the radius" << endl;
                         break;
-                    }
-                    else{
+                    } else {
                         drawCircle_ModifiedMidPoint(hdc, points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is: Circle and the Algorithm is: Modified Midpoint" << endl;
-                        cout<< " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
-                        cout<< " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(CIRCLE_MODIFIED_MIDPOINT, points,currColor);
+                        cout << "The Shape is: Circle and the Algorithm is: Modified Midpoint" << endl;
+                        cout << " 1st point: " << points[points.size() - 2].x << " " << points[points.size() - 2].y
+                             << endl;
+                        cout << " 2nd point: " << points[points.size() - 1].x << " " << points[points.size() - 1].y
+                             << endl;
+                        screen.emplace_back(CIRCLE_MODIFIED_MIDPOINT, points, currColor);
                         points.clear();
                         break;
                     }
+
                 case FILLING_CIRCLE_WITH_LINES:
-                    if(points.size() ==0 ){
-                        cout << "To use this method you have to click 3 clicks\n"
-                                "1- the first one is the center.\n"
-                                "2- the second one is the radius.\n"
-                                "3- and the third one is the quarter of the circle you want to fill with lines.\n";
-
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the center"<<endl;
-                        cout<<"now enter the radius and the quarter"<<endl;
-                    } else if(points.size() == 2){
-                        cout<<"great you have entered the radius and the center"<<endl;
-                        cout<<"now enter the quarter"<<endl;
-                    }
-                    else{
-                        drawCircle_FillingWithLines(hdc, points[points.size() - 3], points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is: Circle and the Algorithm is: Filling Circle With Lines" << endl;
-                        cout<< " 1st point (Center of the circle): " << points[points.size() - 3].x << " " << points[points.size() - 3].y << endl;
-                        cout<< " 2nd point (point on the circle to get radius):" << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
-                        cout<< " 3rd point (point to get the number of quarter to fill with lines): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(FILLING_CIRCLE_WITH_LINES, points,currColor);
+                {
+                    if(!circleFillingFlag){
+                        cout << "please click first draw circle with fill" << endl;
                         points.clear();
+                    }else{
+                        if(points.size()<1){
+                            cout<<"please enter quarter you want to fill"<<endl;
+                        }
+                        else{
+                            p3 = points[points.size() - 1];
+                            int quarter = getQuarter(p1, p2, p3);
+                            drawCircle_FillingWithLines(hdc,p1,p2,quarter,c);
+                            cout << "The Shape is: Circle and the Algorithm is: Filling Circle With Lines" << endl;
+                            cout << " 1st point (Center of the circle): " << p1.x << " " << p1.y << endl;
+                            cout << " 2nd point (point on the circle to get radius):" << p2.x << " " << p2.y << endl;
+                            cout << " 3rd point (point to get the number of quarter to fill with lines): " << p3.x << " "<< p3.y << endl;
+                            screen.emplace_back(FILLING_CIRCLE_WITH_LINES, points, currColor);
+                            circleFillingFlag = false;
+                            points.clear();
+                        }
                     }
+
+
                     break;
+                }
                 case FILLING_CIRCLE_WITH_CIRCLES:
-                    if(points.size() ==0 ){
-                        cout << "To use this method you have to click 3 clicks\n"
-                                "1- the first one is the center.\n"
-                                "2- the second one is the radius.\n"
-                                "3- and the third one is the quarter of the circle you want to fill with circles.\n";
-
-                    }else if(points.size() == 1){
-                        cout<<"great you have entered the center"<<endl;
-                        cout<<"now enter the radius and the quarter"<<endl;
-                    } else if(points.size() == 2){
-                        cout<<"great you have entered the radius and the center"<<endl;
-                        cout<<"now enter the quarter"<<endl;
-                    }
-                    else{
-                        drawCircle_FillingWithCircles(hdc, points[points.size() - 3], points[points.size() - 2], points[points.size() - 1], c);
-                        cout<< "The Shape is: Circle and the Algorithm is: Filling Circle With Circles" << endl;
-                        cout<< " 1st point (Center of the circle): " << points[points.size() - 3].x << " " << points[points.size() - 3].y << endl;
-                        cout<< " 2nd point (point on the circle to get radius):" << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
-                        cout<< " 3rd point (point to get the number of quarter to fill with circles): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
-                        screen.emplace_back(FILLING_CIRCLE_WITH_CIRCLES, points,currColor);
+                    if(!circleFillingFlag){
+                        cout << "please click first draw circle with fill" << endl;
                         points.clear();
+                    }else{
+                        if(points.size()<1){
+                            cout<<"please enter quarter you want to fill with circles"<<endl;
+                        }
+                        else{
+                            p3 = points[points.size() - 1];
+                            int quarter = getQuarter(p1, p2, p3);
+                            drawCircle_FillingWithCircles(hdc,p1,p2,quarter,c);
+                            cout << "The Shape is: Circle and the Algorithm is: Filling Circle With Circles" << endl;
+                            cout << " 1st point (Center of the circle): " << p1.x << " " << p1.y << endl;
+                            cout << " 2nd point (point on the circle to get radius):" << p2.x << " " << p2.y << endl;
+                            cout << " 3rd point (point to get the number of quarter to fill with circles): " << p3.x << " "<< p3.y << endl;
+                            screen.emplace_back(FILLING_CIRCLE_WITH_CIRCLES, points, currColor);
+                            circleFillingFlag = false;
+                            points.clear();
+                        }
                     }
                     break;
                 case TWO_CIRCLES_AND_FILL:
@@ -765,6 +832,8 @@ void AddMenus(HWND hWnd) {
     AppendMenu(hDraw, MF_STRING, DRAW_RECTANGLE, "RECTANGLE");
     AppendMenu(hDraw, MF_STRING, DRAW_POLYGON, "POLYGON");
     AppendMenu(hDraw, MF_STRING, TWO_CIRCLES_AND_FILL, "TWO CIRCLES AND FILL");
+    AppendMenu(hDraw, MF_STRING, CIRCLE_AND_FILL, "Circle and fill");
+
 
     AppendMenu(hOtherOptions, MF_STRING, OTHER_OPTIONS_SAVE, "Save");
     AppendMenu(hOtherOptions, MF_STRING, OTHER_OPTIONS_RELOAD, "Reload");
@@ -1085,44 +1154,100 @@ int getQuarter(point center,point radius,point p){
     if(p.x<center.x && p.y>center.y) return 3;
     return 0;
 }
-void drawCircle_FillingWithLines(HDC hdc, point  p1, point p2,point p3, COLORREF color){
+void drawCircle_FillingWithLines(HDC hdc, point  p1, point p2,int quarter, COLORREF color){
     int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
     int radius = sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
-    drawCircle_ModifiedMidPoint(hdc,p1,p2,color);
-    for (int i = x1 - radius; i <= x1 + radius; i++)
-    {
-        SetPixel(hdc, i, y1, color);
+    // i want to draw lines between the center and the radius point in specific quarter
+    // and use MidPoint line method to draw the lines
+    double sAngel = 0;
+    double eAngel = 0;
+    switch (quarter){
+        case 1:
+            sAngel = 0;
+            eAngel = 90;
+            break;
+        case 2:
+            sAngel = 90;
+            eAngel = 180;
+            break;
+        case 3:
+            sAngel = 180;
+            eAngel = 270;
+            break;
+        case 4:
+            sAngel = 270;
+            eAngel = 360;
+            break;
     }
-    for (int j = y1 - radius; j <= y1 + radius; j++)
-    {
-        SetPixel(hdc, x1, j, color);
+    for (double i = sAngel; i < eAngel; i+=0.1) {
+        double xe = x1 + static_cast<int>(radius * cos(i * 3.14159 / 180.0));
+        double ye = y1 - static_cast<int>(radius * sin(i * 3.14159 / 180.0));
+        point pE ;
+        pE.x = xe;
+        pE.y = ye;
+        MidPointLine(hdc,p1,pE,color);
     }
-    int quarter = getQuarter(p1,p2,p3);
+}
+
+void drawCircle_FillingWithCircles(HDC hdc, point  p1, point p2,int quarter, COLORREF color){
+    int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+    int radius = sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
+    // i want to draw lines between the center and the radius point in specific quarter
+    // and use MidPoint line method to draw the lines
+    double sAngel = 0;
+    double eAngel = 0;
+    switch (quarter){
+        case 1:
+            sAngel = 0;
+            eAngel = 90;
+            break;
+        case 2:
+            sAngel = 90;
+            eAngel = 180;
+            break;
+        case 3:
+            sAngel = 180;
+            eAngel = 270;
+            break;
+        case 4:
+            sAngel = 270;
+            eAngel = 360;
+            break;
+    }
+    int sRadius = 0;
+
 
 
 
 }
 
-void drawCircle_FillingWithCircles(HDC hdc, point  p1, point p2,point p3, COLORREF color){
-    int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
-    int radius = sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
-    drawCircle_ModifiedMidPoint(hdc,p1,p2,color);
-    for (int i = x1 - radius; i <= x1 + radius; i++)
-    {
-        SetPixel(hdc, i, y1, color);
-    }
-    for (int j = y1 - radius; j <= y1 + radius; j++)
-    {
-        SetPixel(hdc, x1, j, color);
-    }
-    int quarter = getQuarter(p1,p2,p3);
-
-
-}
 
 void drawTwoCirclesAndFill(HDC hdc, point p1 , point p2,point p3 ,point p4, COLORREF color){
+    drawCircle_ModifiedMidPoint(hdc,p1,p2,color);
+    drawCircle_ModifiedMidPoint(hdc,p3,p4,color);
+    double radius1=CalcRadius(p1,p2);
+    double radius2=CalcRadius(p3,p4);
+    double distance=CalcRadius(p1,p3);
+    if(abs(distance - (radius1 + radius2)) < 1e-6)
+        cout<<"Tangent Circles\n";
+    else if(distance > (radius1 + radius2))
+        cout<<"Disjoint Circles\n";
+    else if(p1.x==p2.x && p1.y==p2.y && radius2!=radius1)
+        cout<<"Concentric Circles\n";
+    else if(distance < abs(radius1 - radius2) && (radius1+radius2)>distance)
+        cout<<"Nested Circles\n";
+    else{
+        cout<<"Intersecting Circles\n";
+//        FillIntersectingArea(hdc,p1,radius1,p3,radius2,color);
+        }
+
+
+
 
 }
+
+
+
 
 void DrawRectangle(HDC hdc, point p1, point p2, COLORREF c) {
     point p3, p4;
