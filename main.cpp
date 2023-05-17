@@ -4,6 +4,7 @@
 #include <fstream>
 #include<cmath>
 #include <windows.h>
+#include<stack>
 using namespace std;
 
 #define LINE_DDA 1
@@ -50,6 +51,7 @@ using namespace std;
 #define COLOR_BROWN 42
 #define COLOR_GRAY 43
 #define COLOR_CYAN 44
+#define filling_arr_size 400
 
 
 
@@ -84,6 +86,10 @@ struct algorithm {
     }
 };
 
+typedef struct {
+    int right, left;
+} filling_arr[filling_arr_size];
+
 union OutCode {
     unsigned All: 4;
     struct {
@@ -105,38 +111,36 @@ void AddMenus(HWND);
 
 int Round(double);
 
-template<typename T>
-T sqrt(T);
-
-template<typename T>
-T pow(T, unsigned int);
 
 void drawLine_DDA(HDC , point , point, COLORREF);
-
 void drawLine_parametric(HDC, point, point, COLORREF);
-
 void MidPointLine(HDC, point, point, COLORREF);
 
 void DrawEightPoints(HDC, int, int, int, int, COLORREF);
-
 void drawCircle_Direct(HDC, point, point, COLORREF);
-
 void drawCircle_Polar(HDC, point, point, COLORREF);
-
 void drawCircle_IterativePolar(HDC, point, point, COLORREF);
-
 void drawCircle_MidPoint(HDC, point, point, COLORREF);
-
 void drawCircle_ModifiedMidPoint(HDC, point, point, COLORREF);
+
 int getQuarter(point center,point radius,point p);
-
 void drawCircle_FillingWithLines(HDC, point, point,int, COLORREF);
-
 void drawCircle_FillingWithCircles(HDC, point, point, int, COLORREF);
 
 void drawTwoCirclesAndFill(HDC, point, point,point,point , COLORREF);
-
 void FillIntersectingArea(HDC , point , double , point , double , COLORREF );
+
+void swap_point(point& one, point& two);
+void initialize_array(filling_arr array);
+void get_sky_line(point one, point two, filling_arr array);
+void draw_edge(point point_arr[], int n, filling_arr array);
+void draw_sky_line(filling_arr array, HDC hdc, COLORREF c);
+void convex_fill(vector<point> p,  HDC hdc, COLORREF c);
+void not_recursive_flood_fill(COLORREF boarder_color, COLORREF filling_color, HDC hdc, point p);
+void Recursive_FloodFill(HDC hdc, point p, COLORREF currentColor, COLORREF filledColor);
+void DrawBezierCurve(HDC hdc, point P0, point P1, point P2, point P3, COLORREF color);
+void draw_rectangleWithBezierCurve(HDC , point ,point , COLORREF );
+void draw_squareWithHermiteCurve(HDC , point ,point , COLORREF );
 
 void DrawRectangle(HDC hdc, point, point, COLORREF);
 
@@ -173,9 +177,6 @@ void DrawEllipseDirect(HDC , point p, int , int , COLORREF );
 void DrawEllipsePolar(HDC , point , int , int , COLORREF );
 void DrawEllipseMidpoint(HDC , point , int , int , COLORREF );
 double CalcRadius(point, point );
-
-
-void FillIntersectingArea(HDC pHdc, point point1, double radius1, point point2, double radius2, COLORREF color);
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdshow) {
     WNDCLASSW wc = {0};
@@ -526,7 +527,80 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         points.clear();
                     }
                     break;
+                case FILLING_SQUARE_WITH_HERMIT_CURVE:
+                    if(points.size() ==0 ) {
+                        cout << "To use this method you have to click 2 clicks\n"
+                                "1- the first one is the top left point of the square.\n"
+                                "2- the second one is the bottom right point of the square.\n";
+                    }
+                    else if (points.size()==1){
+                        cout<<"great you have entered the top left point of the square"<<endl;
+                        cout<<"now enter the bottom right point of the square"<<endl;
+                    }else {
+                        draw_squareWithHermiteCurve(hdc, points[points.size() - 1],points[points.size()- 2],c);
+                        cout << "The Shape is: Square and the Algorithm is: Filling Square With Hermit Curve" << endl;
+                        cout << " 1st point (top left point of the square): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
+                        cout << " 2nd point (bottom right point of the square):" << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
+                        screen.emplace_back(FILLING_SQUARE_WITH_HERMIT_CURVE, points, currColor);
+                        points.clear();
+                    }
+                    break;
+                case FILLING_RECTANGLE_WITH_BEZIER_CURVE:
+                    if(points.size() ==0 ) {
+                        cout << "To use this method you have to click 2 clicks\n"
+                                "1- the first one is the top left point of the rectangle.\n"
+                                "2- the second one is the bottom right point of the rectangle.\n";
+                    }
+                    else if (points.size()==1){
+                        cout<<"great you have entered the top left point of the rectangle"<<endl;
+                        cout<<"now enter the bottom right point of the rectangle"<<endl;
+                    }else {
+                        draw_rectangleWithBezierCurve(hdc, points[points.size() - 1],points[points.size()- 2],c);
+                        cout << "The Shape is: Rectangle and the Algorithm is: Filling Rectangle With Bezier Curve" << endl;
+                        cout << " 1st point (top left point of the rectangle): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
+                        cout << " 2nd point (bottom right point of the rectangle):" << points[points.size() - 2].x << " " << points[points.size() - 2].y << endl;
+                        screen.emplace_back(FILLING_RECTANGLE_WITH_BEZIER_CURVE, points, currColor);
+                        points.clear();
+                    }
+                    break;
+                case FILLING_CONVEX:
+                    if(points.size() ==0 ) {
+                       cout<<"To use this method you have to click 4 clicks\n"
+                               "1- the first one is the first point of the convex.\n"
+                               "2- the second one is the second point of the convex.\n"
+                               "3- the third one is the third point of the convex.\n"
+                               "4- the fourth one is the fourth point of the convex.\n";
 
+                    }else if(points.size() == 1){
+                        cout<<"great you have entered the first point of the convex"<<endl;
+                        cout<<"now enter the second and third and forth points of the convex"<<endl;
+                    } else if(points.size() == 2){
+                        cout<<"great you have entered the first and second points of the convex"<<endl;
+                        cout<<"now enter the third and fourth point of the convex"<<endl;
+                    } else if(points.size() == 3){
+                        cout<<"great you have entered the first, second and third points of the convex"<<endl;
+                        cout<<"now enter the fourth point of the convex"<<endl;
+                    }else {
+                        convex_fill(points, hdc, c);
+                        cout << "The Shape is: Convex and the Algorithm is: Filling Convex" << endl;
+                        cout << " 1st point (first point of the convex): " << points[points.size() - 4].x << " "
+                             << points[points.size() - 4].y << endl;
+                        cout << " 2nd point (second point of the convex):" << points[points.size() - 3].x << " "
+                             << points[points.size() - 3].y << endl;
+                        cout << " 3rd point (third point of the convex): " << points[points.size() - 2].x << " "
+                             << points[points.size() - 2].y << endl;
+                        cout << " 4th point (fourth point of the convex):" << points[points.size() - 1].x << " "
+                                << points[points.size() - 1].y << endl;
+                        screen.emplace_back(FILLING_CONVEX, points, currColor);
+                        points.clear();
+                    }
+                    break;
+                case FILLING_NON_CONVEX:
+
+                case FLOOD_FILL_RECURSIVE:
+                    break;
+                case FLOOD_FILL_NON_RECURSIVE:
+                    break;
                 case ELLIPSE_DIRECT:{
                     if (points.empty()) {
                         cout << "To use this method you have to click 3 clicks\n"
@@ -1257,6 +1331,194 @@ void FillIntersectingArea(HDC hdc, point circle1Center, double circle1Radius, po
     }
 }
 
+void swap_point(point& one, point& two)
+{
+    point temp = one;
+    one = two;
+    two = temp;
+}
+
+void initialize_array(filling_arr array)
+{
+    for (int i = 0; i < filling_arr_size; i++)
+    {
+        array[i].left = MAXINT;
+        array[i].right = MININT;
+    }
+}
+
+
+
+void get_sky_line(point one, point two, filling_arr array)
+{
+    if (one.y == two.y)return;
+    if (one.y > two.y)swap_point(one, two);
+    double dx = two.x - one.x, dy = two.y - one.y, x = one.x;
+    int y = one.y;
+    double m = dx / dy;
+    while (y < two.y) {
+        if (x < array[y].left)array[y].left = (int)ceil(x);
+        if (x > array[y].right)array[y].right = (int)floor(x);
+        x += m;
+        y++;
+    }
+}
+
+
+void draw_edge(vector<point> point_arr,  filling_arr array)
+{
+    point temp1 = point_arr[point_arr.size() -1];
+    for (int i = 0; i < point_arr.size(); i++)
+    {
+        point temp2 = point_arr[i];
+        get_sky_line(temp1, temp2, array);
+        temp1 = point_arr[i];
+    }
+}
+
+void draw_sky_line(filling_arr array, HDC hdc, COLORREF c) {
+    for (int i = 0; i < filling_arr_size; i++)
+    {
+        if (array[i].left < array[i].right)
+        {
+            for (int x = array[i].left; x <= array[i].right; x++)
+            {
+                SetPixel(hdc, x, i, c);
+            }
+        }
+    }
+}
+
+
+void convex_fill(vector<point> p ,  HDC hdc, COLORREF c) {
+    filling_arr array;
+    initialize_array(array);
+    draw_edge(p,  array);
+    draw_sky_line(array, hdc, c);
+}
+
+
+void not_recursive_flood_fill(COLORREF boarder_color, COLORREF filling_color, HDC hdc, point p) {
+    std::stack<point> st;
+    st.push(p);
+    while (!st.empty()) {
+        point vertex = st.top();
+        st.pop();
+        COLORREF c = GetPixel(hdc,vertex.x, vertex.y);
+        if (c == filling_color || c == boarder_color)continue;
+        SetPixel(hdc, vertex.x, vertex.y, filling_color);
+        st.push(point(vertex.x + 1, vertex.y));
+        st.push(point(vertex.x -1, vertex.y));
+        st.push(point(vertex.x , vertex.y+1));
+        st.push(point(vertex.x , vertex.y-1));
+    }
+}
+void Recursive_FloodFill(HDC hdc, point p, COLORREF currentColor, COLORREF filledColor)
+{
+    COLORREF c = GetPixel(hdc, p.x, p.y);
+    if (c != currentColor)
+        return;
+    SetPixel(hdc, p.x, p.y, filledColor);
+    Recursive_FloodFill(hdc, {p.x + 1, p.y}, currentColor, filledColor);
+    Recursive_FloodFill(hdc, {p.x, p.y + 1}, currentColor, filledColor);
+    Recursive_FloodFill(hdc, {p.x - 1, p.y}, currentColor, filledColor);
+    Recursive_FloodFill(hdc, {p.x, p.y - 1}, currentColor, filledColor);
+}
+void draw_rectangleWithBezierCurve(HDC hdc, point topLeft,point bottomRight, COLORREF boarder_color){
+    DrawRectangle(hdc, topLeft, bottomRight, boarder_color);
+    point p1;
+    p1.x = min(topLeft.x, bottomRight.x);
+    p1.y = min(topLeft.y, bottomRight.y);
+    point p2;
+    p2.x = max(topLeft.x, bottomRight.x);
+    p2.y = min(topLeft.y, bottomRight.y);
+    point p3;
+    p3.x = max(topLeft.x, bottomRight.x);
+    p3.y = max(topLeft.y, bottomRight.y);
+    point p4;
+    p4.x = min(topLeft.x, bottomRight.x);
+    p4.y = max(topLeft.y, bottomRight.y);
+    for (int i = p1.y; i <= p4.y; i++)
+    {
+        DrawBezierCurve(hdc, p4, {p4.x + 10, p4.y - 10}, {p3.x - 10, p3.y - 10}, p3, boarder_color);
+        DrawBezierCurve(hdc, p1, {p1.x + 10, p1.y + 10}, {p2.x - 10, p2.y + 10}, p2, boarder_color);
+        p1.y += 1;
+        p2.y += 1;
+        p3.y -= 1;
+        p4.y -= 1;
+    }
+
+}
+
+void DrawBezierCurve(HDC hdc, point P0, point P1, point P2, point P3, COLORREF color)
+{
+    point T0;
+    T0.x = (3 * (P1.x - P0.x));
+    T0.y = 3 * (P1.y - P0.y);
+    point T1;
+    T1.x = (3 * (P3.x - P2.x));
+    T1.y = 3 * (P3.y - P2.y);
+    DrawHermiteCurve(hdc, P0, T0, P3, T1, color);
+}
+
+
+void draw_squareWithHermiteCurve(HDC hdc, point topLeft,point bottomRight, COLORREF boarder_color) {
+    int width = bottomRight.x - topLeft.x;
+    bottomRight= { topLeft.x + width, topLeft.y + width };
+    point topRight = { bottomRight.x, topLeft.y };
+    point bottomLeft = { topLeft.x, bottomRight.y };
+
+
+    MidPointLine(hdc, topLeft, topRight, boarder_color);
+    MidPointLine(hdc, topRight, bottomRight, boarder_color);
+    MidPointLine(hdc, bottomRight, bottomLeft, boarder_color);
+    MidPointLine(hdc, bottomLeft, topLeft, boarder_color);
+
+    point p1;
+    p1.x = min(topLeft.x, bottomRight.x);
+    p1.y = min(topLeft.y, bottomRight.y);
+    point p2;
+    p2.x = max(topLeft.x, bottomRight.x);
+    p2.y = min(topLeft.y, bottomRight.y);
+    point p3;
+    p3.x = max(topLeft.x, bottomRight.x);
+    p3.y = max(topLeft.y, bottomRight.y);
+    point p4;
+    p4.x = min(topLeft.x, bottomRight.x);
+    p4.y = max(topLeft.y, bottomRight.y);
+    for (int i = p1.x; i <= p2.x; i++)
+    {
+        DrawHermiteCurve(hdc, p1, {50, 50}, p4, {-50, 50}, boarder_color);
+        DrawHermiteCurve(hdc, p2, {-50, 50}, p3, {50, 50}, boarder_color);
+        p1.x += 1;
+        p2.x -= 1;
+        p3.x -= 1;
+        p4.x += 1;
+    }
+
+
+}
+void DrawHermiteCurve(HDC hdc, point p1, point T1, point p2, point T2, COLORREF color)
+{
+
+    double alpha0 = p1.x,
+            alpha1 = T1.x,
+            alpha2 = -3 * p1.x - 2 * T1.x + 3 * p2.x - T2.x,
+            alpha3 = 2 * p1.x + T1.x - 2 * p2.x + T2.x;
+    double beta0 = p1.y,
+            beta1 = T1.y,
+            beta2 = -3 * p1.y - 2 * T1.y + 3 * p2.y - T2.y,
+            beta3 = 2 * p1.y + T1.y - 2 * p2.y + T2.y;
+    for (double t = 0; t <= 1; t += 0.001)
+    {
+        double t2 = t * t,
+                t3 = t2 * t;
+        double x = alpha0 + alpha1 * t + alpha2 * t2 + alpha3 * t3;
+        double y = beta0 + beta1 * t + beta2 * t2 + beta3 * t3;
+
+        SetPixel(hdc, round(x), round(y), color);
+    }
+}
 
 
 void DrawRectangle(HDC hdc, point p1, point p2, COLORREF c) {
@@ -1410,27 +1672,6 @@ void PolygonClip(HDC hdc, vector <point> &p, int n, int xleft, int ytop, int xri
     }
 }
 
-void DrawHermiteCurve(HDC hdc, point p1, point T1, point p2, point T2, COLORREF color)
-{
-
-    double alpha0 = p1.x,
-            alpha1 = T1.x,
-            alpha2 = -3 * p1.x - 2 * T1.x + 3 * p2.x - T2.x,
-            alpha3 = 2 * p1.x + T1.x - 2 * p2.x + T2.x;
-    double beta0 = p1.y,
-            beta1 = T1.y,
-            beta2 = -3 * p1.y - 2 * T1.y + 3 * p2.y - T2.y,
-            beta3 = 2 * p1.y + T1.y - 2 * p2.y + T2.y;
-    for (double t = 0; t <= 1; t += 0.001)
-    {
-        double t2 = t * t,
-                t3 = t2 * t;
-        double x = alpha0 + alpha1 * t + alpha2 * t2 + alpha3 * t3;
-        double y = beta0 + beta1 * t + beta2 * t2 + beta3 * t3;
-
-        SetPixel(hdc, round(x), round(y), color);
-    }
-}
 
 
 void DrawCardinalSpline(HDC hdc, vector<point> p, int n, double c, COLORREF color)
