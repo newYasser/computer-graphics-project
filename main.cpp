@@ -34,6 +34,7 @@ using namespace std;
 #define CLIPPING_USING_SQUARE_POLYGON 25
 #define DRAW_RECTANGLE 26
 #define DRAW_POLYGON 27
+#define DRAW_SQUARE  45
 #define CIRCLE_AND_FILL 28
 #define TWO_CIRCLES_AND_FILL 29
 #define OTHER_OPTIONS_SAVE 30
@@ -174,6 +175,7 @@ void PolygonClip(HDC hdc, vector <point> &, int, int, int, int, int);
 void DrawHermiteCurve(HDC hdc, point p1, point T1, point p2, point T2, COLORREF color);
 void DrawCardinalSpline(HDC, vector<point> , int , double , COLORREF );
 void Draw4points(HDC , int , int , int , int , COLORREF );
+void PointClipping(HDC,point ,int ,int ,int ,int ,COLORREF );
 void DrawEllipseDirect(HDC , point p, int , int , COLORREF );
 void DrawEllipsePolar(HDC , point , int , int , COLORREF );
 void DrawEllipseMidpoint(HDC , point , int , int , COLORREF );
@@ -226,7 +228,8 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
             point p;
             p.x = LOWORD(lp);
             p.y = HIWORD(lp);
-            cout<<"you clicked at "<<p.x<<" "<<p.y<<endl;
+            //cout<<"you clicked at "<<p.x<<" "<<p.y<<endl;
+            SetPixel(hdc, p.x, p.y, c);
             points.push_back(p);
             break;
         }
@@ -236,20 +239,42 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_COMMAND: {
 
             switch (wp) {
-                case DRAW_RECTANGLE:
-                    if (points.size() < 2) {
-                        cout << "Please Enter 2 points at least" << endl;
+                case DRAW_RECTANGLE: {
+                    p1 = points[0];
+                    p2 = points[1];
+                    if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
+                        cout << "Please Enter the points of rectangle correctly." << endl;
                         break;
                     }
-                    DrawRectangle(hdc, points[points.size() - 2], points[points.size() - 1], c);
+                    DrawRectangle(hdc, p1, p2, c);
                     screen.emplace_back(DRAW_RECTANGLE, points, currColor);
-                    //points.clear();
+                    points.clear();
                     break;
-                case DRAW_POLYGON:
+                }
+                case DRAW_SQUARE:{
+                    p1 = points[0];
+                    p2 = points[1];
+                    if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
+                        cout << "Please enter the points of square correctly." << endl;
+                        break;
+                    }
+                    cout << p2.x << " " << p2.y << endl;
+                    p2.x = (p1.y - p2.y) + p1.x;
+                    cout << p1.x << " " << p1.y << endl;
+                    cout << p2.x << " " << p2.y << endl;
+                    DrawRectangle(hdc, p1, p2, c);
+                    screen.emplace_back(DRAW_SQUARE, points, currColor);
+                    points.clear();
+                    break;
+                }
+                case DRAW_POLYGON: {
+                    if (points.size() > 3) {
+                        cout << "You have to enter more than 2 points" << endl;
+                    }
                     DrawPolygon(hdc, points, c);
                     screen.emplace_back(DRAW_POLYGON, points, currColor);
-                    //points.clear();
                     break;
+                }
                 case CIRCLE_AND_FILL: {
 
                     if (points.size() == 0) {
@@ -722,43 +747,106 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     }
                     break;
                 }
-                case CLIPPING_USING_RECTANGLE_LINE:
-                    if (points.size() == 0) {
-                        cout << "Please Enter the line 2 points and draw a Rectangle" << endl;
-                        break;
-                    } else if (points.size() == 2) {
-                        cout << "Please Enter the line 2 points and draw a a rec" << endl;
-                        DrawRectangle(hdc,points[0],points[1],c);
-                        screen.emplace_back(DRAW_RECTANGLE,points,currColor);
-                        break;
-                    }else if(points.size() < 4){
-                        cout << "Enter 2 points to draw a line." << endl;
+                case CLIPPING_USING_SQUARE_LINE:{
+                    if((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1) && points.empty()){
+                        cout << "To use this method you need to: \n"
+                                "1- Enter 2 points and click draw square\n"
+                                "2- Enter 2 points of the line\n"
+                                "3- Click from the menu Clipping -> Square -> Line \n";
                     }
-                    else if (points.size() >= 4) {
-                        CohenSuth(hdc, points[points.size() - 2], points[points.size() - 1],
-                                  points[points.size() - 4].x, points[points.size() - 3].y, points[points.size() - 3].x,
-                                  points[points.size() - 4].y, c);
-                        screen.emplace_back(CLIPPING_USING_RECTANGLE_LINE, points,currColor);
+                    if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
+                        cout << "Enter the 2 points and draw a Square" << endl;
+                        break;
+                    } else if (points.empty()) {
+                        cout << "Please Enter the 2 points of the line" << endl;
+                        break;
+                    }else if (points.size() == 2) {
+                        CohenSuth(hdc, points[0], points[1],
+                                  p1.x, p2.y, p2.x,
+                                  p1.y, c);
+                        screen.emplace_back(CLIPPING_USING_SQUARE_LINE, points,currColor);
                         points.clear();
+                        p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
                     } else {
                         cout << "Something went wrong please try again" << endl;
                         break;
                     }
                     break;
-                case CLIPPING_USING_RECTANGLE_POLYGON:
-                    PolygonClip(hdc, points, points.size(), points[0].x, points[1].y, points[1].x, points[0].y);
-                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points,currColor);
-                    points.clear();
-                    break;
-                case CARDINAL_SPLINE_CURVE:
-                    if(points.size() < 3){
-                        cout << "You have to Enter points more than 3" << endl;
+                }
+                case CLIPPING_USING_SQUARE_POLYGON: {
+                    if (points.empty() && p1.x == -1 && p1.y == -1 && p2.x == -1 && p2.y == -1) {
+                        cout << "To use this function you have to:\n"
+                                "1- Enter 2 points to draw the square 1st one for the min point and other one for the max point.\n"
+                                "2- Enter n points and draw the polygon\n"
+                                "3 - Click from the menu Clipping -> Square -> Polygon\n";
+                    }else if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
+                        cout << "Enter the 2 points and draw a Square" << endl;
+                        break;
+                    } else if (points.size() < 2) {
+                        cout << "Please Enter more than two points to draw polygon" << endl;
+                        break;
                     }
-                    DrawCardinalSpline( hdc, points, points.size(),1,c);
-                    screen.emplace_back(CARDINAL_SPLINE_CURVE,points,currColor);
+                    PolygonClip(hdc, points, points.size(), p1.x, p2.y, p2.x, p1.y);
+                    screen.emplace_back(CLIPPING_USING_SQUARE_POLYGON, points, currColor);
                     points.clear();
+                    p1.x = -1;
+                    p1.y = -1;
+                    p2.y = -1;
+                    p2.x = -1;
                     break;
-
+                }
+                case CARDINAL_SPLINE_CURVE: {
+                        if (points.size() < 3) {
+                            cout << "You have to Enter points more than 3" << endl;
+                        }
+                        DrawCardinalSpline(hdc, points, points.size(), 1, c);
+                        screen.emplace_back(CARDINAL_SPLINE_CURVE, points, currColor);
+                        points.clear();
+                        break;
+                    break;
+                }
+                case CLIPPING_USING_RECTANGLE_LINE:
+                    if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
+                        cout << "Enter the line 2 points and draw a Rectangle" << endl;
+                        break;
+                    } else if (points.empty()) {
+                        cout << "Please Enter the line 2 points to draw a line" << endl;
+                        break;
+                    }else if (points.size() == 2) {
+                        CohenSuth(hdc, points[0], points[1],
+                                  p1.x, p2.y, p2.x,
+                                  p1.y, c);
+                        screen.emplace_back(CLIPPING_USING_RECTANGLE_LINE, points,currColor);
+                        points.clear();
+                        p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
+                    } else {
+                        cout << "Something went wrong please try again" << endl;
+                        break;
+                    }
+                    break;
+                case CLIPPING_USING_RECTANGLE_POLYGON: {
+                    if (points.empty() && p1.x == -1 && p1.y == -1 && p2.x == -1 && p2.y == -1) {
+                        cout << "To use this function you have to:\n"
+                                "1- Enter 2 points to draw the rectangle 1st one for the min point and other one for the max point.\n"
+                                "2- Enter n points and draw the polygon\n"
+                                "3 - Click Clipping the chose using Rectangle and then click polygon\n";
+                    }
+                    PolygonClip(hdc, points, points.size(), p1.x, p2.y, p2.x, p1.y);
+                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points, currColor);
+                    points.clear();
+                    p1.x = -1;
+                    p1.y = -1;
+                    p2.y = -1;
+                    p2.x = -1;
+                    break;
+                }
+                case CLIPPING_USING_RECTANGLE_POINT:{
+                    PointClipping(hdc,points[0], p1.x, p2.y,p2.x,p1.x,c);
+                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POINT, points, currColor);
+                    points.clear();
+                    p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
+                    break;
+                }
                 case OTHER_OPTIONS_CLEAR:
                     screen.clear();
                     points.clear();
@@ -958,6 +1046,7 @@ void AddMenus(HWND hWnd) {
     AppendMenu(hDraw, MF_STRING, DRAW_POLYGON, "POLYGON");
     AppendMenu(hDraw, MF_STRING, TWO_CIRCLES_AND_FILL, "TWO CIRCLES AND FILL");
     AppendMenu(hDraw, MF_STRING, CIRCLE_AND_FILL, "Circle and fill");
+    AppendMenu(hDraw, MF_STRING, DRAW_SQUARE, "Square");
 
 
     AppendMenu(hOtherOptions, MF_STRING, OTHER_OPTIONS_SAVE, "Save");
@@ -994,10 +1083,6 @@ void AddMenus(HWND hWnd) {
 
     SetMenu(hWnd, hMenu);
 }
-
-// starting point of execution
-
-
 
 void MidPointLine(HDC hdc, point p1, point p2, COLORREF c) {
     int dx = p2.x - p1.x;
@@ -1361,6 +1446,7 @@ void drawTwoCirclesAndFill(HDC hdc, point p1 , point p2,point p3 ,point p4, COLO
     }
 }
 
+
 void FillIntersectingArea(HDC hdc, point circle1Center, double circle1Radius, point circle2Center, double circle2Radius, COLORREF color) {
     int left = max(circle1Center.x - circle1Radius, circle2Center.x - circle2Radius);
     int top = max(circle1Center.y - circle1Radius, circle2Center.y - circle2Radius);
@@ -1557,6 +1643,10 @@ void DrawHermiteCurve(HDC hdc, point p1, point T1, point p2, point T2, COLORREF 
 }
 
 
+
+}
+
+
 void DrawRectangle(HDC hdc, point p1, point p2, COLORREF c) {
     point p3, p4;
     p3.x = p1.x;
@@ -1568,6 +1658,7 @@ void DrawRectangle(HDC hdc, point p1, point p2, COLORREF c) {
     MidPointLine(hdc, p2, p3, c);
     MidPointLine(hdc, p2, p4, c);
 }
+
 
 OutCode GetOutCode(point p1, int xleft, int ytop, int xright, int ybottom) {
     OutCode out;
@@ -1612,7 +1703,7 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
                 HIntersect(pStart, pEnd, ytop, &xi, &yi);
             else if (out1.right)
                 VIntersect(pStart, pEnd, xright, &xi, &yi);
-            else
+            else if(out1.bottom)
                 HIntersect(pStart, pEnd, ybottom, &xi, &yi);
             pStart.x = xi;
             pStart.y = yi;
@@ -1625,7 +1716,7 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
                 HIntersect(pStart, pEnd, ytop, &xi, &yi);
             else if (out2.right)
                 VIntersect(pStart, pEnd, xright, &xi, &yi);
-            else
+            else if(out2.bottom)
                 HIntersect(pStart, pEnd, ybottom, &xi, &yi);
             pEnd.x = xi;
             pEnd.y = yi;
@@ -1633,7 +1724,8 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
         }
     }
     if (!out1.All && !out2.All) {
-        drawLine_DDA(hdc, pStart, pEnd, c);
+        drawLine_parametric(hdc, pStart, pEnd, c);
+        cout << "hi";
     }
 }
 
@@ -1690,6 +1782,13 @@ point HIntersect(point &v1, point &v2, int yedge) {
     res.y = yedge;
     res.x = v1.x + (yedge - v1.y) * (v2.x - v1.x) / (v2.y - v1.y);
     return res;
+}
+
+
+void PointClipping(HDC hdc,point p,int xleft,int ytop,int xright,int ybottom,COLORREF color)
+{
+    if(!(p.x>=xleft && p.x<= xright && p.y>=ytop && p.y<=ybottom))
+        SetPixel(hdc,p.x,p.y, RGB(255,255,255));
 }
 
 void PolygonClip(HDC hdc, vector <point> &p, int n, int xleft, int ytop, int xright, int ybottom) {
