@@ -133,10 +133,10 @@ void FillIntersectingArea(HDC , point , double , point , double , COLORREF );
 void swap_point(point& one, point& two);
 void initialize_array(filling_arr array);
 void get_sky_line(point one, point two, filling_arr array);
-void draw_edge(point point_arr[], int n, filling_arr array);
+void draw_edge(vector<point> point_arr,  filling_arr array);
 void draw_sky_line(filling_arr array, HDC hdc, COLORREF c);
 void convex_fill(vector<point> p,  HDC hdc, COLORREF c);
-void not_recursive_flood_fill(COLORREF boarder_color, COLORREF filling_color, HDC hdc, point p);
+void not_recursive_flood_fill(HDC hdc, point p,COLORREF boarder_color, COLORREF filling_color);
 void Recursive_FloodFill(HDC hdc, point p, COLORREF currentColor, COLORREF filledColor);
 void DrawBezierCurve(HDC hdc, point P0, point P1, point P2, point P3, COLORREF color);
 void draw_rectangleWithBezierCurve(HDC , point ,point , COLORREF );
@@ -596,10 +596,30 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     }
                     break;
                 case FILLING_NON_CONVEX:
+                    break;
 
                 case FLOOD_FILL_RECURSIVE:
-                    break;
+                    if(points.size() ==0 ) {
+                        cout<<"To use this method you have to click 1 click\n"
+                                "1- the first one is the point you want to start the flood fill from.\n";
+                    }else {
+                        Recursive_FloodFill(hdc, points[points.size() - 1], GetPixel(hdc, points[points.size() - 1].x, points[points.size() - 1].y),c);
+                        cout << "The Shape is: Flood Fill and the Algorithm is: Recursive Flood Fill" << endl;
+                        cout << " 1st point (the point you want to start the flood fill from): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
+                        screen.emplace_back(FLOOD_FILL_RECURSIVE, points, currColor);
+                        points.clear();
+                    }
                 case FLOOD_FILL_NON_RECURSIVE:
+                    if(points.size() ==0 ) {
+                        cout<<"To use this method you have to click 1 click\n"
+                                "1- the first one is the point you want to start the flood fill from.\n";
+                    }else {
+                        not_recursive_flood_fill(hdc, points[points.size() - 1], GetPixel(hdc, points[points.size() - 1].x, points[points.size() - 1].y),c);
+                        cout << "The Shape is: Flood Fill and the Algorithm is: Non Recursive Flood Fill" << endl;
+                        cout << " 1st point (the point you want to start the flood fill from): " << points[points.size() - 1].x << " " << points[points.size() - 1].y << endl;
+                        screen.emplace_back(FLOOD_FILL_NON_RECURSIVE, points, currColor);
+                        points.clear();
+                    }
                     break;
                 case ELLIPSE_DIRECT:{
                     if (points.empty()) {
@@ -1398,14 +1418,14 @@ void convex_fill(vector<point> p ,  HDC hdc, COLORREF c) {
 }
 
 
-void not_recursive_flood_fill(COLORREF boarder_color, COLORREF filling_color, HDC hdc, point p) {
+void not_recursive_flood_fill(HDC hdc,  point p,COLORREF boarder_color, COLORREF filling_color) {
     std::stack<point> st;
     st.push(p);
     while (!st.empty()) {
         point vertex = st.top();
         st.pop();
         COLORREF c = GetPixel(hdc,vertex.x, vertex.y);
-        if (c == filling_color || c == boarder_color)continue;
+        if (c != boarder_color)continue;
         SetPixel(hdc, vertex.x, vertex.y, filling_color);
         st.push(point(vertex.x + 1, vertex.y));
         st.push(point(vertex.x -1, vertex.y));
