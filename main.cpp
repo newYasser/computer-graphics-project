@@ -217,7 +217,8 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
             point p;
             p.x = LOWORD(lp);
             p.y = HIWORD(lp);
-            cout<<"you clicked at "<<p.x<<" "<<p.y<<endl;
+            //cout<<"you clicked at "<<p.x<<" "<<p.y<<endl;
+            SetPixel(hdc, p.x, p.y, c);
             points.push_back(p);
             break;
         }
@@ -622,17 +623,22 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     break;
                 }
                 case CLIPPING_USING_SQUARE_LINE:{
+                    if((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1) && points.empty()){
+                        cout << "To use this method you need to: \n"
+                                "1- Enter 2 points and click draw square\n"
+                                "2- Enter 2 points of the line\n"
+                                "3- Click from the menu Clipping -> Square -> Line \n";
+                    }
                     if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
-                        cout << "Enter the line 2 points and draw a Rectangle" << endl;
+                        cout << "Enter the 2 points and draw a Square" << endl;
                         break;
                     } else if (points.empty()) {
-                        cout << "Please Enter the line 2 points to draw a line" << endl;
+                        cout << "Please Enter the 2 points of the line" << endl;
                         break;
                     }else if (points.size() == 2) {
                         CohenSuth(hdc, points[0], points[1],
                                   p1.x, p2.y, p2.x,
                                   p1.y, c);
-                        cout << "hi" << endl;
                         screen.emplace_back(CLIPPING_USING_SQUARE_LINE, points,currColor);
                         points.clear();
                         p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
@@ -640,6 +646,38 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout << "Something went wrong please try again" << endl;
                         break;
                     }
+                    break;
+                }
+                case CLIPPING_USING_SQUARE_POLYGON: {
+                    if (points.empty() && p1.x == -1 && p1.y == -1 && p2.x == -1 && p2.y == -1) {
+                        cout << "To use this function you have to:\n"
+                                "1- Enter 2 points to draw the square 1st one for the min point and other one for the max point.\n"
+                                "2- Enter n points and draw the polygon\n"
+                                "3 - Click from the menu Clipping -> Square -> Polygon\n";
+                    }else if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
+                        cout << "Enter the 2 points and draw a Square" << endl;
+                        break;
+                    } else if (points.size() < 2) {
+                        cout << "Please Enter more than two points to draw polygon" << endl;
+                        break;
+                    }
+                    PolygonClip(hdc, points, points.size(), p1.x, p2.y, p2.x, p1.y);
+                    screen.emplace_back(CLIPPING_USING_SQUARE_POLYGON, points, currColor);
+                    points.clear();
+                    p1.x = -1;
+                    p1.y = -1;
+                    p2.y = -1;
+                    p2.x = -1;
+                    break;
+                }
+                case CARDINAL_SPLINE_CURVE: {
+                        if (points.size() < 3) {
+                            cout << "You have to Enter points more than 3" << endl;
+                        }
+                        DrawCardinalSpline(hdc, points, points.size(), 1, c);
+                        screen.emplace_back(CARDINAL_SPLINE_CURVE, points, currColor);
+                        points.clear();
+                        break;
                     break;
                 }
                 case CLIPPING_USING_RECTANGLE_LINE:
@@ -661,25 +699,20 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                     break;
-                case CLIPPING_USING_RECTANGLE_POLYGON:
-                    if(points.empty() && p1.x == -1 && p1.y == -1 && p2.x == -1 && p2.y == -1){
+                case CLIPPING_USING_RECTANGLE_POLYGON: {
+                    if (points.empty() && p1.x == -1 && p1.y == -1 && p2.x == -1 && p2.y == -1) {
                         cout << "To use this function you have to:\n"
                                 "1- Enter 2 points to draw the rectangle 1st one for the min point and other one for the max point.\n"
                                 "2- Enter n points and draw the polygon\n"
                                 "3 - Click Clipping the chose using Rectangle and then click polygon\n";
                     }
                     PolygonClip(hdc, points, points.size(), p1.x, p2.y, p2.x, p1.y);
-                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points,currColor);
+                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points, currColor);
                     points.clear();
-                    p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
-                    break;
-                case CARDINAL_SPLINE_CURVE: {
-                    if (points.size() < 3) {
-                        cout << "You have to Enter points more than 3" << endl;
-                    }
-                    DrawCardinalSpline(hdc, points, points.size(), 1, c);
-                    screen.emplace_back(CARDINAL_SPLINE_CURVE, points, currColor);
-                    points.clear();
+                    p1.x = -1;
+                    p1.y = -1;
+                    p2.y = -1;
+                    p2.x = -1;
                     break;
                 }
                 case CLIPPING_USING_RECTANGLE_POINT:{
@@ -1424,8 +1457,8 @@ point HIntersect(point &v1, point &v2, int yedge) {
 
 void PointClipping(HDC hdc,point p,int xleft,int ytop,int xright,int ybottom,COLORREF color)
 {
-    if(p.x>=xleft && p.x<= xright && p.y>=ytop && p.y<=ybottom)
-        SetPixel(hdc,p.x,p.y,color);
+    if(!(p.x>=xleft && p.x<= xright && p.y>=ytop && p.y<=ybottom))
+        SetPixel(hdc,p.x,p.y, RGB(255,255,255));
 }
 
 void PolygonClip(HDC hdc, vector <point> &p, int n, int xleft, int ytop, int xright, int ybottom) {
