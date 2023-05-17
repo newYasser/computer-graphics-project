@@ -141,6 +141,7 @@ void Recursive_FloodFill(HDC hdc, point p, COLORREF currentColor, COLORREF fille
 void DrawBezierCurve(HDC hdc, point P0, point P1, point P2, point P3, COLORREF color);
 void draw_rectangleWithBezierCurve(HDC , point ,point , COLORREF );
 void draw_squareWithHermiteCurve(HDC , point ,point , COLORREF );
+void DrawNonConvexShape(HDC hdc,point p1,point p2,point p3 , point p4, COLORREF c );
 
 void DrawRectangle(HDC hdc, point, point, COLORREF);
 
@@ -179,10 +180,11 @@ void DrawEllipseMidpoint(HDC , point , int , int , COLORREF );
 double CalcRadius(point, point );
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdshow) {
-    WNDCLASSW wc = {0};
+    WNDCLASSW wc={} ;
+
+
     wc.hbrBackground = (HBRUSH) COLOR_WINDOW;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.hInstance = hInst;
     wc.hInstance = hInst;
     wc.lpszClassName = (L"WindowClass");
     wc.lpfnWndProc = WindowProcedure;
@@ -192,10 +194,14 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdsho
         return -1;
     }
 
-    CreateWindowW((L"WindowClass"), (L"Graphics Project"),
+    HWND hwnd=CreateWindowW((L"WindowClass"), L"Graphics Project",
                   WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 500, 500, nullptr, NULL, NULL, NULL);
 
-    MSG msg = {nullptr};
+    if (hwnd == nullptr) {
+        cout << "Window Creation Failed" << endl;
+        return -1;
+    }
+    MSG msg = {};
     while (GetMessage(&msg, nullptr, NULL, NULL)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
@@ -596,6 +602,26 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     }
                     break;
                 case FILLING_NON_CONVEX:
+                    if(points.size() ==0 ) {
+                        cout << "To use this method you have to click 4 clicks\n"
+                                "1- the first one is the first point of the non convex.\n"
+                                "2- the second one is the second point of the non convex.\n"
+                                "3- the third one is the third point of the non convex.\n"
+                                "4- the fourth one is the fourth point of the non convex.\n";
+                    }else{
+                        DrawNonConvexShape( hdc, points[points.size() - 4],points[points.size() - 3],points[points.size() - 2],points[points.size() - 1],c);
+                        cout << "The Shape is: Non Convex and the Algorithm is: Filling Non Convex" << endl;
+                        cout << " 1st point (first point of the non convex): " << points[points.size() - 4].x << " "
+                             << points[points.size() - 4].y << endl;
+                        cout << " 2nd point (second point of the non convex):" << points[points.size() - 3].x << " "
+                             << points[points.size() - 3].y << endl;
+                        cout << " 3rd point (third point of the non convex): " << points[points.size() - 2].x << " "
+                             << points[points.size() - 2].y << endl;
+                        cout << " 4th point (fourth point of the non convex):" << points[points.size() - 1].x << " "
+                             << points[points.size() - 1].y << endl;
+                        screen.emplace_back(FILLING_NON_CONVEX, points, currColor);
+                        points.clear();
+                    }
                     break;
 
                 case FLOOD_FILL_RECURSIVE:
@@ -1417,6 +1443,19 @@ void convex_fill(vector<point> p ,  HDC hdc, COLORREF c) {
     draw_sky_line(array, hdc, c);
 }
 
+void DrawNonConvexShape(HDC hdc,point p1,point p2,point p3 , point p4, COLORREF c )
+{
+    point points[] = {
+            p1,
+            p2,
+            p3,
+            p4
+    };
+
+    // Draw the shape
+//    Polygon(hdc, points, sizeof(points) / sizeof(points[0]));
+}
+
 
 void not_recursive_flood_fill(HDC hdc,  point p,COLORREF boarder_color, COLORREF filling_color) {
     std::stack<point> st;
@@ -1446,18 +1485,11 @@ void Recursive_FloodFill(HDC hdc, point p, COLORREF currentColor, COLORREF fille
 }
 void draw_rectangleWithBezierCurve(HDC hdc, point topLeft,point bottomRight, COLORREF boarder_color){
     DrawRectangle(hdc, topLeft, bottomRight, boarder_color);
-    point p1;
-    p1.x = min(topLeft.x, bottomRight.x);
-    p1.y = min(topLeft.y, bottomRight.y);
-    point p2;
-    p2.x = max(topLeft.x, bottomRight.x);
-    p2.y = min(topLeft.y, bottomRight.y);
-    point p3;
-    p3.x = max(topLeft.x, bottomRight.x);
-    p3.y = max(topLeft.y, bottomRight.y);
-    point p4;
-    p4.x = min(topLeft.x, bottomRight.x);
-    p4.y = max(topLeft.y, bottomRight.y);
+    point p1={min(topLeft.x, bottomRight.x),min(topLeft.y, bottomRight.y)};
+    point p2={max(topLeft.x, bottomRight.x),min(topLeft.y, bottomRight.y)};
+    point p3={max(topLeft.x, bottomRight.x),max(topLeft.y, bottomRight.y)};
+    point p4={min(topLeft.x, bottomRight.x),max(topLeft.y, bottomRight.y)};
+
     for (int i = p1.y; i <= p4.y; i++)
     {
         DrawBezierCurve(hdc, p4, {p4.x + 10, p4.y - 10}, {p3.x - 10, p3.y - 10}, p3, boarder_color);
@@ -1485,27 +1517,11 @@ void DrawBezierCurve(HDC hdc, point P0, point P1, point P2, point P3, COLORREF c
 void draw_squareWithHermiteCurve(HDC hdc, point topLeft,point bottomRight, COLORREF boarder_color) {
     int width = bottomRight.x - topLeft.x;
     bottomRight= { topLeft.x + width, topLeft.y + width };
-    point topRight = { bottomRight.x, topLeft.y };
-    point bottomLeft = { topLeft.x, bottomRight.y };
-
-
-    MidPointLine(hdc, topLeft, topRight, boarder_color);
-    MidPointLine(hdc, topRight, bottomRight, boarder_color);
-    MidPointLine(hdc, bottomRight, bottomLeft, boarder_color);
-    MidPointLine(hdc, bottomLeft, topLeft, boarder_color);
-
-    point p1;
-    p1.x = min(topLeft.x, bottomRight.x);
-    p1.y = min(topLeft.y, bottomRight.y);
-    point p2;
-    p2.x = max(topLeft.x, bottomRight.x);
-    p2.y = min(topLeft.y, bottomRight.y);
-    point p3;
-    p3.x = max(topLeft.x, bottomRight.x);
-    p3.y = max(topLeft.y, bottomRight.y);
-    point p4;
-    p4.x = min(topLeft.x, bottomRight.x);
-    p4.y = max(topLeft.y, bottomRight.y);
+    DrawRectangle(hdc, topLeft, bottomRight, boarder_color);
+    point p1={min(topLeft.x, bottomRight.x),min(topLeft.y, bottomRight.y)};
+    point p2={max(topLeft.x, bottomRight.x),min(topLeft.y, bottomRight.y)};
+    point p3={max(topLeft.x, bottomRight.x),max(topLeft.y, bottomRight.y)};
+    point p4={min(topLeft.x, bottomRight.x),max(topLeft.y, bottomRight.y)};
     for (int i = p1.x; i <= p2.x; i++)
     {
         DrawHermiteCurve(hdc, p1, {50, 50}, p4, {-50, 50}, boarder_color);
