@@ -54,6 +54,7 @@ using namespace std;
 #define COLOR_CYAN 45
 #define CLIPPING_USING_CIRCLE_POINT 46
 #define CLIPPING_USING_CIRCLE_LINE 47
+
 #define filling_arr_size 400
 
 
@@ -195,8 +196,10 @@ EdgeRec InitEdgeRec(point &, point &);
 void GeneralPolygonFill(HDC hdc, vector<point> , COLORREF );
 
 
+
 void ClippingCirclewithLine(HDC hdc,point center,point onCIRCLE, point p1, point p2, COLORREF c);
 void ClippingCirclewithPoint(HDC pHdc, point circleCenter, point circleRadius, point point, COLORREF c);
+
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdshow) {
     WNDCLASSW wc={} ;
@@ -246,7 +249,11 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
             p.x = LOWORD(lp);
             p.y = HIWORD(lp);
             //cout<<"you clicked at "<<p.x<<" "<<p.y<<endl;
+
 //           SetPixel(hdc, p.x, p.y, c);
+
+            SetPixel(hdc, p.x, p.y, c);
+
             points.push_back(p);
             break;
         }
@@ -266,6 +273,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     DrawRectangle(hdc, p1, p2, c);
                     screen.emplace_back(DRAW_RECTANGLE, points, currColor);
                     points.clear();
+
                     break;
                 }
                 case DRAW_SQUARE:{
@@ -284,6 +292,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     points.clear();
                     break;
                 }
+
                 case DRAW_POLYGON: {
                     if (points.size() > 3) {
                         cout << "You have to enter more than 2 points" << endl;
@@ -869,6 +878,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     p2.y = -1;
                     p2.x = -1;
                     break;
+
                 }
                 case CLIPPING_USING_CIRCLE_POINT:{
                     if(points.empty()){
@@ -888,6 +898,43 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         points.clear();
                         p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
                     }
+
+
+                    break;
+                }
+                case CLIPPING_USING_RECTANGLE_LINE:
+                    if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
+                        cout << "Enter the line 2 points and draw a Rectangle" << endl;
+                        break;
+                    } else if (points.empty()) {
+                        cout << "Please Enter the line 2 points to draw a line" << endl;
+                        break;
+                    }else if (points.size() == 2) {
+                        CohenSuth(hdc, points[0], points[1],
+                                  p1.x, p2.y, p2.x,
+                                  p1.y, c);
+                        screen.emplace_back(CLIPPING_USING_RECTANGLE_LINE, points,currColor);
+                        points.clear();
+                        p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
+                    } else {
+                        cout << "Something went wrong please try again" << endl;
+                        break;
+                    }
+                    break;
+                case CLIPPING_USING_RECTANGLE_POLYGON: {
+                    if (points.empty() && p1.x == -1 && p1.y == -1 && p2.x == -1 && p2.y == -1) {
+                        cout << "To use this function you have to:\n"
+                                "1- Enter 2 points to draw the rectangle 1st one for the min point and other one for the max point.\n"
+                                "2- Enter n points and draw the polygon\n"
+                                "3 - Click Clipping the chose using Rectangle and then click polygon\n";
+                    }
+                    PolygonClip(hdc, points, points.size(), p1.x, p2.y, p2.x, p1.y);
+                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points, currColor);
+                    points.clear();
+                    p1.x = -1;
+                    p1.y = -1;
+                    p2.y = -1;
+                    p2.x = -1;
 
                     break;
                 }
