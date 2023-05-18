@@ -92,7 +92,7 @@ struct EdgeRec
     double x;
     double minv;
     int ymax;
-    bool operator<(EdgeRec r)
+    bool operator<(EdgeRec r) const
     {
         return x < r.x;
     }
@@ -187,7 +187,6 @@ double CalcRadius(point, point );
 
 
 EdgeRec InitEdgeRec(point &, point &);
-void InitEdgeTable(vector<point>, EdgeList);
 
 void GeneralPolygonFill(HDC hdc, vector<point> , COLORREF );
 
@@ -207,7 +206,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdsho
     }
 
     HWND hwnd=CreateWindowW((L"WindowClass"), L"Graphics Project",
-                            WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 500, 500, nullptr, NULL, NULL, NULL);
+                            WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 500, 500, nullptr, nullptr, nullptr, nullptr);
 
     if (hwnd == nullptr) {
         cout << "Window Creation Failed" << endl;
@@ -287,7 +286,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                 }
                 case CIRCLE_AND_FILL: {
 
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "To use this method you have to click 2 clicks\n"
                                 "1- the first one is the center.\n"
                                 "2- the second one is the radius.\n";
@@ -333,7 +332,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     break;
                 }
                 case LINE_MID_POINT:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
                         break;
                     } else if (points.size() == 1) {
@@ -352,7 +351,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case LINE_DDA:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
                         break;
                     } else if (points.size() == 1) {
@@ -371,7 +370,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case LINE_PARAMETRIC:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least ( start point and end point )" << endl;
                         break;
                     } else if (points.size() == 1) {
@@ -390,7 +389,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_DIRECT:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius"
                              << endl;
                         break;
@@ -410,7 +409,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_POLAR:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius"
                              << endl;
                         break;
@@ -430,7 +429,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_ITERATIVE_POLAR:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius"
                              << endl;
                         break;
@@ -450,7 +449,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_MIDPOINT:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius"
                              << endl;
                         break;
@@ -470,7 +469,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         break;
                     }
                 case CIRCLE_MODIFIED_MIDPOINT:
-                    if (points.size() == 0) {
+                    if (points.empty()) {
                         cout << "Please Enter 2 points at least first one is the center and the second is the radius"
                              << endl;
                         break;
@@ -496,7 +495,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout << "please click first draw circle with fill" << endl;
                         points.clear();
                     }else{
-                        if(points.size()<1){
+                        if(points.empty()){
                             cout<<"please enter quarter you want to fill"<<endl;
                         }
                         else{
