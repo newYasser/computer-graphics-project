@@ -87,6 +87,16 @@ struct algorithm {
     }
 };
 
+struct EdgeRec
+{
+    double x;
+    double minv;
+    int ymax;
+    bool operator<(EdgeRec r)
+    {
+        return x < r.x;
+    }
+};
 typedef struct {
     int right, left;
 } filling_arr[filling_arr_size];
@@ -101,18 +111,13 @@ union OutCode {
 typedef vector <point> VertexList;
 
 typedef bool (*IsInFunc)(point &v, int edge);
-
+typedef list<EdgeRec> EdgeList;
 typedef point (*IntersectFunc)(point &v1, point &v2, int edge);
 
 HMENU hMenu;
 
 LRESULT CALLBACK WindowProcedure(HWND, UINT, WPARAM, LPARAM);
-
 void AddMenus(HWND);
-
-int Round(double);
-
-
 void drawLine_DDA(HDC , point , point, COLORREF);
 void drawLine_parametric(HDC, point, point, COLORREF);
 void MidPointLine(HDC, point, point, COLORREF);
@@ -142,7 +147,6 @@ void Recursive_FloodFill(HDC hdc, point p, COLORREF currentColor, COLORREF fille
 void DrawBezierCurve(HDC hdc, point P0, point P1, point P2, point P3, COLORREF color);
 void draw_rectangleWithBezierCurve(HDC , point ,point , COLORREF );
 void draw_squareWithHermiteCurve(HDC , point ,point , COLORREF );
-void DrawNonConvexShape(HDC hdc,point p1,point p2,point p3 , point p4, COLORREF c );
 
 void DrawRectangle(HDC hdc, point, point, COLORREF);
 
@@ -181,6 +185,12 @@ void DrawEllipsePolar(HDC , point , int , int , COLORREF );
 void DrawEllipseMidpoint(HDC , point , int , int , COLORREF );
 double CalcRadius(point, point );
 
+
+EdgeRec InitEdgeRec(point &, point &);
+void InitEdgeTable(vector<point>, EdgeList);
+
+void GeneralPolygonFill(HDC hdc, vector<point> , COLORREF );
+
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdshow) {
     WNDCLASSW wc={} ;
 
@@ -197,7 +207,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdsho
     }
 
     HWND hwnd=CreateWindowW((L"WindowClass"), L"Graphics Project",
-                  WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 500, 500, nullptr, NULL, NULL, NULL);
+                            WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 500, 500, nullptr, NULL, NULL, NULL);
 
     if (hwnd == nullptr) {
         cout << "Window Creation Failed" << endl;
@@ -596,11 +606,11 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     break;
                 case FILLING_CONVEX:
                     if(points.size() ==0 ) {
-                       cout<<"To use this method you have to click 4 clicks\n"
-                               "1- the first one is the first point of the convex.\n"
-                               "2- the second one is the second point of the convex.\n"
-                               "3- the third one is the third point of the convex.\n"
-                               "4- the fourth one is the fourth point of the convex.\n";
+                        cout<<"To use this method you have to click 4 clicks\n"
+                              "1- the first one is the first point of the convex.\n"
+                              "2- the second one is the second point of the convex.\n"
+                              "3- the third one is the third point of the convex.\n"
+                              "4- the fourth one is the fourth point of the convex.\n";
 
                     }else if(points.size() == 1){
                         cout<<"great you have entered the first point of the convex"<<endl;
@@ -621,7 +631,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                         cout << " 3rd point (third point of the convex): " << points[points.size() - 2].x << " "
                              << points[points.size() - 2].y << endl;
                         cout << " 4th point (fourth point of the convex):" << points[points.size() - 1].x << " "
-                                << points[points.size() - 1].y << endl;
+                             << points[points.size() - 1].y << endl;
                         screen.emplace_back(FILLING_CONVEX, points, currColor);
                         points.clear();
                     }
@@ -634,7 +644,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                                 "3- the third one is the third point of the non convex.\n"
                                 "4- the fourth one is the fourth point of the non convex.\n";
                     }else{
-                        DrawNonConvexShape( hdc, points[points.size() - 4],points[points.size() - 3],points[points.size() - 2],points[points.size() - 1],c);
+                        GeneralPolygonFill(hdc,points,c);
                         cout << "The Shape is: Non Convex and the Algorithm is: Filling Non Convex" << endl;
                         cout << " 1st point (first point of the non convex): " << points[points.size() - 4].x << " "
                              << points[points.size() - 4].y << endl;
@@ -650,9 +660,9 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     break;
 
                 case FLOOD_FILL_RECURSIVE:
-                    if(points.size() ==0 ) {
+                    if(points.empty()) {
                         cout<<"To use this method you have to click 1 click\n"
-                                "1- the first one is the point you want to start the flood fill from.\n";
+                              "1- the first one is the point you want to start the flood fill from.\n";
                     }else {
                         Recursive_FloodFill(hdc, points[points.size() - 1], GetPixel(hdc, points[points.size() - 1].x, points[points.size() - 1].y),c);
                         cout << "The Shape is: Flood Fill and the Algorithm is: Recursive Flood Fill" << endl;
@@ -663,7 +673,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                 case FLOOD_FILL_NON_RECURSIVE:
                     if(points.size() ==0 ) {
                         cout<<"To use this method you have to click 1 click\n"
-                                "1- the first one is the point you want to start the flood fill from.\n";
+                              "1- the first one is the point you want to start the flood fill from.\n";
                     }else {
                         not_recursive_flood_fill(hdc, points[points.size() - 1], GetPixel(hdc, points[points.size() - 1].x, points[points.size() - 1].y),c);
                         cout << "The Shape is: Flood Fill and the Algorithm is: Non Recursive Flood Fill" << endl;
@@ -796,13 +806,13 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     break;
                 }
                 case CARDINAL_SPLINE_CURVE: {
-                        if (points.size() < 3) {
-                            cout << "You have to Enter points more than 3" << endl;
-                        }
-                        DrawCardinalSpline(hdc, points, points.size(), 1, c);
-                        screen.emplace_back(CARDINAL_SPLINE_CURVE, points, currColor);
-                        points.clear();
-                        break;
+                    if (points.size() < 3) {
+                        cout << "You have to Enter points more than 3" << endl;
+                    }
+                    DrawCardinalSpline(hdc, points, points.size(), 1, c);
+                    screen.emplace_back(CARDINAL_SPLINE_CURVE, points, currColor);
+                    points.clear();
+                    break;
                     break;
                 }
                 case CLIPPING_USING_RECTANGLE_LINE:
@@ -1479,8 +1489,6 @@ void initialize_array(filling_arr array)
     }
 }
 
-
-
 void get_sky_line(point one, point two, filling_arr array)
 {
     if (one.y == two.y)return;
@@ -1528,20 +1536,6 @@ void convex_fill(vector<point> p ,  HDC hdc, COLORREF c) {
     draw_edge(p,  array);
     draw_sky_line(array, hdc, c);
 }
-
-void DrawNonConvexShape(HDC hdc,point p1,point p2,point p3 , point p4, COLORREF c )
-{
-    point points[] = {
-            p1,
-            p2,
-            p3,
-            p4
-    };
-
-    // Draw the shape
-//    Polygon(hdc, points, sizeof(points) / sizeof(points[0]));
-}
-
 
 void not_recursive_flood_fill(HDC hdc,  point p,COLORREF boarder_color, COLORREF filling_color) {
     std::stack<point> st;
@@ -1641,11 +1635,6 @@ void DrawHermiteCurve(HDC hdc, point p1, point T1, point p2, point T2, COLORREF 
         SetPixel(hdc, round(x), round(y), color);
     }
 }
-
-
-
-}
-
 
 void DrawRectangle(HDC hdc, point p1, point p2, COLORREF c) {
     point p3, p4;
@@ -1929,4 +1918,66 @@ void DrawEllipseMidpoint(HDC hdc, point p, int a, int b, COLORREF c)
         }
         Draw4points(hdc, xc, yc, x, y, c);
     }
+}
+
+EdgeRec InitEdgeRec(point &v1, point &v2)
+{
+    if (v1.y > v2.y)
+        swap(v1, v2);
+    EdgeRec rec;
+    rec.x = v1.x;
+    rec.ymax = v2.y;
+    rec.minv = (double)(v2.x - v1.x) / (v2.y - v1.y);
+    return rec;
+}
+void InitEdgeTable(vector<point> polygon, EdgeList table[])
+{
+    point v1 = polygon[polygon.size() - 1];
+    for (int i = 0; i < polygon.size(); i++)
+    {
+        point v2 = polygon[i];
+        if (v1.y == v2.y)
+        {
+            v1 = v2;
+            continue;
+        }
+        EdgeRec rec = InitEdgeRec(v1, v2);
+        table[v1.y].push_back(rec);
+        v1 = polygon[i];
+    }
+}
+
+void GeneralPolygonFill(HDC hdc, vector<point> polygon, COLORREF c)
+{
+    EdgeList *table = new EdgeList[1920];
+    InitEdgeTable(polygon, table);
+    int y = 0;
+    while (y < 1920 && table[y].size() == 0)
+        y++;
+    if (y == 1920)
+        return;
+    EdgeList ActiveList = table[y];
+    while (ActiveList.size() > 0)
+    {
+        ActiveList.sort();
+        for (EdgeList::iterator it = ActiveList.begin(); it != ActiveList.end(); it++)
+        {
+            int x1 = (int)ceil(it->x);
+            it++;
+            int x2 = (int)floor(it->x);
+            for (int x = x1; x <= x2; x++)
+                SetPixel(hdc, x, y, c);
+        }
+        y++;
+        EdgeList::iterator it = ActiveList.begin();
+        while (it != ActiveList.end())
+            if (y == it->ymax)
+                it = ActiveList.erase(it);
+            else
+                it++;
+        for (EdgeList::iterator it = ActiveList.begin(); it != ActiveList.end(); it++)
+            it->x += it->minv;
+        ActiveList.insert(ActiveList.end(), table[y].begin(), table[y].end());
+    }
+    delete[] table;
 }
