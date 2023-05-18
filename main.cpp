@@ -1923,6 +1923,8 @@ void PointClipping(HDC hdc,point p,int xleft,int ytop,int xright,int ybottom,COL
 {
     if(!(p.x>=xleft && p.x<= xright && p.y>=ytop && p.y<=ybottom))
         SetPixel(hdc,p.x,p.y, RGB(255,255,255));
+    else
+        SetPixel(hdc,p.x,p.y, color);
 }
 
 void PolygonClip(HDC hdc, vector <point> &p, int n, int xleft, int ytop, int xright, int ybottom) {
