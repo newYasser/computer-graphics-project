@@ -902,42 +902,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
 
                     break;
                 }
-                case CLIPPING_USING_RECTANGLE_LINE:
-                    if ((p1.x == -1 && p1.y == -1) || (p2.x == -1 && p2.y == -1)) {
-                        cout << "Enter the line 2 points and draw a Rectangle" << endl;
-                        break;
-                    } else if (points.empty()) {
-                        cout << "Please Enter the line 2 points to draw a line" << endl;
-                        break;
-                    }else if (points.size() == 2) {
-                        CohenSuth(hdc, points[0], points[1],
-                                  p1.x, p2.y, p2.x,
-                                  p1.y, c);
-                        screen.emplace_back(CLIPPING_USING_RECTANGLE_LINE, points,currColor);
-                        points.clear();
-                        p1.x = -1;p1.y = -1;p2.y = -1;p2.x = -1;
-                    } else {
-                        cout << "Something went wrong please try again" << endl;
-                        break;
-                    }
-                    break;
-                case CLIPPING_USING_RECTANGLE_POLYGON: {
-                    if (points.empty() && p1.x == -1 && p1.y == -1 && p2.x == -1 && p2.y == -1) {
-                        cout << "To use this function you have to:\n"
-                                "1- Enter 2 points to draw the rectangle 1st one for the min point and other one for the max point.\n"
-                                "2- Enter n points and draw the polygon\n"
-                                "3 - Click Clipping the chose using Rectangle and then click polygon\n";
-                    }
-                    PolygonClip(hdc, points, points.size(), p1.x, p2.y, p2.x, p1.y);
-                    screen.emplace_back(CLIPPING_USING_RECTANGLE_POLYGON, points, currColor);
-                    points.clear();
-                    p1.x = -1;
-                    p1.y = -1;
-                    p2.y = -1;
-                    p2.x = -1;
 
-                    break;
-                }
                 case CLIPPING_USING_RECTANGLE_POINT:{
                     PointClipping(hdc,points[0], p1.x, p2.y,p2.x,p1.x,c);
                     screen.emplace_back(CLIPPING_USING_RECTANGLE_POINT, points, currColor);
@@ -1970,6 +1935,8 @@ void PointClipping(HDC hdc,point p,int xleft,int ytop,int xright,int ybottom,COL
 {
     if(!(p.x>=xleft && p.x<= xright && p.y>=ytop && p.y<=ybottom))
         SetPixel(hdc,p.x,p.y, RGB(255,255,255));
+    else
+        SetPixel(hdc,p.x,p.y, color);
 }
 
 void PolygonClip(HDC hdc, vector <point> &p, int n, int xleft, int ytop, int xright, int ybottom) {
