@@ -1778,73 +1778,22 @@ void CohenSuth(HDC hdc, point p1, point p2, int xleft, int ytop, int xright, int
         cout << "hi";
     }
 }
-OutCode GetOutCodeCircle(point p, point center, int radius)
-{
-    OutCode out;
-    out.All = 0;
 
-    // Calculate the region codes for the point
-    out.left = (p.x < center.x - radius) ? 1 : 0;
-    out.right = (p.x > center.x + radius) ? 1 : 0;
-    out.top = (p.y < center.y - radius) ? 1 : 0;
-    out.bottom = (p.y > center.y + radius) ? 1 : 0;
-
-    return out;
-}
 void ClippingCirclewithLine(HDC hdc, point center, point onCIRCLE, point p1, point p2, COLORREF c)
 {
     int radius = sqrt(pow(center.x - onCIRCLE.x, 2) + pow(center.y - onCIRCLE.y, 2));
     drawCircle_ModifiedMidPoint(hdc, center, onCIRCLE, c);
-
-    point pStart = p1;
-    point pEnd = p2;
-
-    OutCode out1 = GetOutCodeCircle(pStart, center, radius);
-    OutCode out2 = GetOutCodeCircle(pEnd, center, radius);
-
-
-    while (out1.All || out2.All)
+    double x,y;
+    for (double t = 0; t < 1; t += 0.0001)
     {
-
-        if (out1.All & out2.All)
-            return;
-
-        int xi, yi;
-        if (out1.All)
-        {
-
-            if (out1.left)
-                VIntersect(pStart, pEnd, center.x - radius, &xi, &yi);
-            else if (out1.top)
-                HIntersect(pStart, pEnd, center.y - radius, &xi, &yi);
-            else if (out1.right)
-                VIntersect(pStart, pEnd, center.x + radius, &xi, &yi);
-            else if (out1.bottom)
-                HIntersect(pStart, pEnd, center.y + radius, &xi, &yi);
-
-            pStart.x = xi;
-            pStart.y = yi;
-            out1 = GetOutCodeCircle(pStart, center, radius);
-        }
+        x = p1.x + t * (p2.x - p1.x);
+        y = p1.y + t * (p2.y - p1.y);
+        if (pow(x - center.x, 2) + pow(y - center.y, 2) > pow(radius, 2))
+            SetPixel(hdc, round(x), round(y), RGB(255, 255, 255));
         else
-        {
-
-            if (out2.left)
-                VIntersect(pStart, pEnd, center.x - radius, &xi, &yi);
-            else if (out2.top)
-                HIntersect(pStart, pEnd, center.y - radius, &xi, &yi);
-            else if (out2.right)
-                VIntersect(pStart, pEnd, center.x + radius, &xi, &yi);
-            else if (out2.bottom)
-                HIntersect(pStart, pEnd, center.y + radius, &xi, &yi);
-
-            pEnd.x = xi;
-            pEnd.y = yi;
-            out2 = GetOutCodeCircle(pEnd, center, radius);
-        }
+            SetPixel(hdc, round(x), round(y), c);
     }
-    drawLine_parametric(hdc, pStart, pEnd, c);
-    cout << "hi";
+
 }
 
 void ClippingCirclewithPoint(HDC pHdc, point circleCenter, point circleRadius, point point, COLORREF c) {
