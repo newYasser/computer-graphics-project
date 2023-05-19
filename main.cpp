@@ -90,16 +90,18 @@ struct algorithm {
     }
 };
 
-struct EdgeRec
+struct node_content
 {
-    double x;
-    double minv;
-    int ymax;
-    bool operator<(EdgeRec r) const
+    double x, slope_inverse;
+    int maximum_y;
+    bool operator<(const node_content& r)
     {
         return x < r.x;
     }
 };
+
+typedef list<node_content> NonConvex;
+
 typedef struct {
     int right, left;
 } filling_arr[filling_arr_size];
@@ -116,7 +118,7 @@ union OutCode {
 typedef vector <point> VertexList;
 
 typedef bool (*IsInFunc)(point &v, int edge);
-typedef list<EdgeRec> EdgeList;
+
 typedef point (*IntersectFunc)(point &v1, point &v2, int edge);
 
 HMENU hMenu;
@@ -190,8 +192,8 @@ void DrawEllipsePolar(HDC , point , int , int , COLORREF );
 void DrawEllipseMidpoint(HDC , point , int , int , COLORREF );
 double CalcRadius(point, point );
 
+node_content initialize_node_content(point& one, point& two);
 
-EdgeRec InitEdgeRec(point &, point &);
 
 void GeneralPolygonFill(HDC hdc, vector<point> , COLORREF );
 
@@ -248,7 +250,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
             point p;
             p.x = LOWORD(lp);
             p.y = HIWORD(lp);
-            //cout<<"you clicked at "<<p.x<<" "<<p.y<<endl;
+            cout<<"you clicked at "<<p.x<<" "<<p.y<<endl;
 
 //           SetPixel(hdc, p.x, p.y, c);
 
@@ -644,23 +646,12 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
                     }
                     break;
                 case FILLING_NON_CONVEX:
-                    if(points.size() ==0 ) {
-                        cout << "To use this method you have to click 4 clicks\n"
-                                "1- the first one is the first point of the non convex.\n"
-                                "2- the second one is the second point of the non convex.\n"
-                                "3- the third one is the third point of the non convex.\n"
-                                "4- the fourth one is the fourth point of the non convex.\n";
+                    if(points.size() <4 ) {
+                        cout << "To use this method you have to click 4 clicks or more\n";
                     }else{
                         GeneralPolygonFill(hdc,points,c);
                         cout << "The Shape is: Non Convex and the Algorithm is: Filling Non Convex" << endl;
-                        cout << " 1st point (first point of the non convex): " << points[points.size() - 4].x << " "
-                             << points[points.size() - 4].y << endl;
-                        cout << " 2nd point (second point of the non convex):" << points[points.size() - 3].x << " "
-                             << points[points.size() - 3].y << endl;
-                        cout << " 3rd point (third point of the non convex): " << points[points.size() - 2].x << " "
-                             << points[points.size() - 2].y << endl;
-                        cout << " 4th point (fourth point of the non convex):" << points[points.size() - 1].x << " "
-                             << points[points.size() - 1].y << endl;
+
                         screen.emplace_back(FILLING_NON_CONVEX, points, currColor);
                         points.clear();
                     }
@@ -2074,64 +2065,73 @@ void DrawEllipseMidpoint(HDC hdc, point p, int a, int b, COLORREF c)
     }
 }
 
-EdgeRec InitEdgeRec(point &v1, point &v2)
+node_content initialize_node_content(point& one, point& two)
 {
-    if (v1.y > v2.y)
-        swap(v1, v2);
-    EdgeRec rec;
-    rec.x = v1.x;
-    rec.ymax = v2.y;
-    rec.minv = (double)(v2.x - v1.x) / (v2.y - v1.y);
-    return rec;
+    if (one.y > two.y)swap_point(one, two);
+
+    node_content temp{};
+
+    double dx = (two.x - one.x), dy = (two.y - one.y);
+
+    temp.x = one.x;
+
+    temp.maximum_y = two.y;
+
+    temp.slope_inverse = (double)dx / dy;
+
+    return temp;
 }
-void InitEdgeTable(vector<point> polygon, EdgeList table[])
+void initialize_nonConvex_array(vector<point> points_array, NonConvex Non_convex_array[])
 {
-    point v1 = polygon[polygon.size() - 1];
-    for (int i = 0; i < polygon.size(); i++)
+    point temp1 = points_array[points_array.size() - 1];
+    for (auto& i : points_array)
     {
-        point v2 = polygon[i];
-        if (v1.y == v2.y)
+        point temp2 = i;
+        if (temp1.y == temp2.y)
         {
-            v1 = v2;
+            temp1 = temp2;
             continue;
         }
-        EdgeRec rec = InitEdgeRec(v1, v2);
-        table[v1.y].push_back(rec);
-        v1 = polygon[i];
+        node_content node = initialize_node_content(temp1, temp2);
+        Non_convex_array[temp1.y].push_back(node);
+        temp1 = i;
     }
 }
 
-void GeneralPolygonFill(HDC hdc, vector<point> polygon, COLORREF c)
+void GeneralPolygonFill(HDC hdc, vector<point> points_array, COLORREF c)
 {
-    EdgeList *table = new EdgeList[1920];
-    InitEdgeTable(polygon, table);
+    auto* non_convex_array = new NonConvex[1920];
+    initialize_nonConvex_array(points_array, non_convex_array);
     int y = 0;
-    while (y < 1920 && table[y].size() == 0)
+    while (y < 1920 && non_convex_array[y].empty())
         y++;
     if (y == 1920)
         return;
-    EdgeList ActiveList = table[y];
-    while (ActiveList.size() > 0)
+    NonConvex active_nodes = non_convex_array[y];
+    NonConvex::iterator i;
+    int temp1, temp2;
+    while (!active_nodes.empty())
     {
-        ActiveList.sort();
-        for (EdgeList::iterator it = ActiveList.begin(); it != ActiveList.end(); it++)
+        active_nodes.sort();
+        for (i = active_nodes.begin(); i != active_nodes.end(); i++)
         {
-            int x1 = (int)ceil(it->x);
-            it++;
-            int x2 = (int)floor(it->x);
-            for (int x = x1; x <= x2; x++)
-                SetPixel(hdc, x, y, c);
+            temp1 = (int)ceil(i->x);
+            i++;
+            temp2 = (int)floor(i->x);
+            for (int j = temp1; j <= temp2; j++)
+                SetPixel(hdc, j, y, c);
         }
         y++;
-        EdgeList::iterator it = ActiveList.begin();
-        while (it != ActiveList.end())
-            if (y == it->ymax)
-                it = ActiveList.erase(it);
-            else
-                it++;
-        for (EdgeList::iterator it = ActiveList.begin(); it != ActiveList.end(); it++)
-            it->x += it->minv;
-        ActiveList.insert(ActiveList.end(), table[y].begin(), table[y].end());
+
+        i = active_nodes.begin();
+
+        while (i != active_nodes.end())
+            if (y == i->maximum_y)i = active_nodes.erase(i);
+            else i++;
+
+        for (i = active_nodes.begin(); i != active_nodes.end(); i++) i->x += i->slope_inverse;
+
+        active_nodes.insert(active_nodes.end(), non_convex_array[y].begin(), non_convex_array[y].end());
     }
-    delete[] table;
+    delete[] non_convex_array;
 }
