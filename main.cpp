@@ -252,7 +252,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 //           SetPixel(hdc, p.x, p.y, c);
 
-            SetPixel(hdc, p.x, p.y, c);
+
 
             points.push_back(p);
             break;
@@ -1424,8 +1424,6 @@ int getQuarter(point center,point radius,point p){
 void drawCircle_FillingWithLines(HDC hdc, point  p1, point p2,int quarter, COLORREF color){
     int x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
     int radius = sqrt(pow(y2 - y1, 2)+ pow(x2 - x1, 2));
-    // i want to draw lines between the center and the radius point in specific quarter
-    // and use MidPoint line method to draw the lines
     double sAngel = 0;
     double eAngel = 0;
     switch (quarter){
@@ -1512,13 +1510,13 @@ void drawTwoCirclesAndFill(HDC hdc, point p1 , point p2,point p3 ,point p4, COLO
         else
             not_recursive_flood_fill(hdc, {p1.x+1,p1.y+1},GetPixel(hdc,p1.x+1,p1.y+1), color);
     }
-        else if(distance < abs(radius1 - radius2) && (radius1+radius2)>distance){
+    else if(distance < abs(radius1 - radius2) && (radius1+radius2)>distance){
         cout<<"Nested Circles\n";
         if(radius1>radius2)
             not_recursive_flood_fill(hdc, {p3.x+1,p3.y+1}, GetPixel(hdc,p3.x+1,p3.y+1), color);
         else
             not_recursive_flood_fill(hdc, {p1.x+1,p1.y+1},GetPixel(hdc,p1.x+1,p1.y+1), color);
-        }
+    }
 
     else{
         cout<<"Intersecting Circles\n";
