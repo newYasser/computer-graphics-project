@@ -1444,7 +1444,7 @@ void drawCircle_FillingWithLines(HDC hdc, point  p1, point p2,int quarter, COLOR
             eAngel = 360;
             break;
     }
-    for (double i = sAngel; i < eAngel; i+=0.1) {
+    for (double i = sAngel; i < eAngel; i+=0.01) {
         double xe = x1 + static_cast<int>(radius * cos(i * 3.14159 / 180.0));
         double ye = y1 - static_cast<int>(radius * sin(i * 3.14159 / 180.0));
         point pE ;
@@ -1479,12 +1479,12 @@ void drawCircle_FillingWithCircles(HDC hdc, point  p1, point p2,int quarter, COL
     }
     int sRadius = 0;
     int eRadius = radius;
-    for(; sRadius<2*eRadius; sRadius+=1)
+    for(; sRadius<=eRadius; sRadius+=1)
     {
         for (double i = sAngel; i < eAngel; i += 0.1)
         {
-            int x = x1 + static_cast<int>(sRadius / 2 * cos(i * 3.14159 / 180.0));
-            int y = y1 - static_cast<int>(sRadius / 2 * sin(i * 3.14159 / 180.0));
+            int x = x1 + static_cast<int>(sRadius  * cos(i * 3.14159 / 180.0));
+            int y = y1 - static_cast<int>(sRadius  * sin(i * 3.14159 / 180.0));
             SetPixel(hdc, x, y, color);
         }
 
@@ -1866,9 +1866,6 @@ void ClippingCirclewithPoint(HDC pHdc, point circleCenter, point circleRadius, p
     else {
         SetPixel(pHdc, point.x, point.y, c);
     }
-
-
-
 }
 
 
